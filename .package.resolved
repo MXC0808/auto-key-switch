@@ -1,0 +1,33 @@
+{
+  "originHash" : "abd668d4b935751bb6859fa6bf91310949de6d9e69b7f03870b619643733c1c5",
+  "pins" : [
+    {
+      "identity" : "defaults",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sindresorhus/Defaults",
+      "state" : {
+        "revision" : "3efef5a28ebdbbe922d4a2049493733ed14475a6",
+        "version" : "7.3.1"
+      }
+    },
+    {
+      "identity" : "swifterswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SwifterSwift/SwifterSwift",
+      "state" : {
+        "revision" : "5d948a15446bddb6c367bc7e7100cfcbaa0e9b57",
+        "version" : "8.0.0"
+      }
+    },
+    {
+      "identity" : "visualeffects",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/twostraws/VisualEffects",
+      "state" : {
+        "revision" : "8ff7f90f9650d9db5774275d0b1f07ef642ecf4d",
+        "version" : "1.0.3"
+      }
+    }
+  ],
+  "version" : 3
+}

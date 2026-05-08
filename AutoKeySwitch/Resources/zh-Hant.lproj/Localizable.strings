@@ -1,0 +1,24 @@
+// 應用程式資訊
+"app.about" = "關於 APP %@";
+"app.github_repository" = "開啟 GitHub 倉庫";
+"app.latest_release" = "最新 Release";
+
+// 選單
+"menu.quit" = "結束";
+
+// 設定
+"settings.general.auto_launch" = "開機啟動";
+
+// 應用程式列表
+"apps.section.running_count" = "正在執行 (%d)";
+"apps.section.configured_count" = "已設定 (%d)";
+
+// 輸入法相關
+"input_method.default_option" = "--";
+
+// 錯誤訊息
+"error.get_input_methods_failed" = "取得輸入法列表失敗";
+"error.input_method_not_found" = "找不到指定的輸入法: %@";
+"error.input_method_not_enabled" = "輸入法未啟用: %@";
+"error.switch_input_method_failed" = "切換輸入法失敗: %@";
+"error.get_current_input_method_failed" = "取得目前輸入法失敗";

@@ -1,0 +1,210 @@
+import AppKit
+import Carbon
+import Foundation
+import OSLog
+
+/// 输入法服务类
+/// 负责获取、切换和管理系统输入法
+@MainActor
+enum InputMethodService {
+    
+    /// 输入法相关错误
+    enum InputMethodError: Error, LocalizedError {
+        case failedToFetchInputMethods
+        case inputMethodNotFound(String)
+        case inputMethodNotEnabled(String)
+        case failedToSwitchInputMethod(String)
+        case failedToGetCurrentInputMethod
+        
+        var errorDescription: String? {
+            switch self {
+            case .failedToFetchInputMethods:
+                return AutoKeySwitchStrings.Error.getInputMethodsFailed
+            case .inputMethodNotFound(let id):
+                return AutoKeySwitchStrings.Error.inputMethodNotFound(id)
+            case .inputMethodNotEnabled(let id):
+                return AutoKeySwitchStrings.Error.inputMethodNotEnabled(id)
+            case .failedToSwitchInputMethod(let id):
+                return AutoKeySwitchStrings.Error.switchInputMethodFailed(id)
+            case .failedToGetCurrentInputMethod:
+                return AutoKeySwitchStrings.Error.getCurrentInputMethodFailed
+            }
+        }
+    }
+    
+    
+    // MARK: - 公共方法
+    
+    /// 获取所有可用的输入法
+    /// - Returns: 输入法数组，按名称排序
+    /// - Throws: Error 当获取失败时
+    static func fetchInputMethods() throws -> [InputMethod] {
+        let inputSources = try getInputSourceList()
+        
+        // 过滤和转换输入源
+        let methods = inputSources.compactMap { source -> InputMethod? in
+            guard let properties = getInputSourceProperties(source),
+                  isValidInputSourceType(properties.sourceType),
+                  properties.isSelectable, properties.isEnabled
+            else {
+                return nil
+            }
+            
+            // Get icon
+			let icon = getInputSourceIcon(source)
+			return InputMethod(id: properties.sourceID, name: properties.localizedName, icon: icon)
+        }
+        
+        // 按本地化名称排序
+        return methods.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+    
+    /// 切换到指定的输入法
+    /// - Parameter inputMethodID: 输入法ID
+    /// - Throws: Error 当切换失败时
+    static func switchToInputMethod(_ inputMethodID: String) throws {
+        let inputSources = try getInputSourceList()
+        
+        // 查找目标输入源
+        guard let targetSource = inputSources.first(where: { source in
+            guard let properties = getInputSourceProperties(source) else {
+                return false
+            }
+            return properties.sourceID == inputMethodID
+        }) else {
+            throw InputMethodError.inputMethodNotFound(inputMethodID)
+        }
+        
+        // 切换输入法前确保输入法是启用的
+        guard let enabledPtr = TISGetInputSourceProperty(targetSource, kTISPropertyInputSourceIsEnabled),
+              let enabled = Unmanaged<CFBoolean>.fromOpaque(enabledPtr).takeUnretainedValue() as? Bool,
+              enabled
+        else {
+            throw InputMethodError.inputMethodNotEnabled(inputMethodID)
+        }
+        
+        let status = TISSelectInputSource(targetSource)
+        if status != noErr {
+            throw InputMethodError.failedToSwitchInputMethod(inputMethodID)
+        }
+    }
+    
+    /// 获取当前激活的输入法ID
+    /// - Returns: 当前输入法ID
+    /// - Throws: Error 当获取失败时
+    static func getCurrentInputMethodId() throws -> String {
+        // 获取当前输入源
+        guard let currentSource = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue() else {
+            throw InputMethodError.failedToGetCurrentInputMethod
+        }
+        
+        // 获取输入源属性
+        guard let properties = getInputSourceProperties(currentSource) else {
+            throw InputMethodError.failedToGetCurrentInputMethod
+        }
+        
+        return properties.sourceID
+    }
+    
+    // MARK: - Private Helpers
+    
+    /// 获取输入源列表
+    /// - Returns: 输入源数组
+    /// - Throws: Error 当获取失败时
+    private static func getInputSourceList() throws -> [TISInputSource] {
+        guard let inputSourceList = TISCreateInputSourceList(nil, false)?.takeRetainedValue(),
+              let inputSources = (inputSourceList as NSArray) as? [TISInputSource]
+        else {
+            throw InputMethodError.failedToFetchInputMethods
+        }
+        
+        return inputSources
+    }
+    
+    
+    /// 获取输入源属性
+    /// - Parameter source: 输入源
+    /// - Returns: 输入源属性，失败时返回nil
+    private static func getInputSourceProperties(_ source: TISInputSource) -> InputSourceProperties? {
+        // 获取输入源ID
+        guard let sourceIDPtr = TISGetInputSourceProperty(source, kTISPropertyInputSourceID),
+              let sourceID = Unmanaged<CFString>.fromOpaque(sourceIDPtr).takeUnretainedValue() as String?,
+              // 获取输入源类型
+              let sourceTypePtr = TISGetInputSourceProperty(source, kTISPropertyInputSourceType),
+              let sourceType = Unmanaged<CFString>.fromOpaque(sourceTypePtr).takeUnretainedValue() as String?,
+              // 获取本地化名称
+              let localizedNamePtr = TISGetInputSourceProperty(source, kTISPropertyLocalizedName),
+              let localizedName = Unmanaged<CFString>.fromOpaque(localizedNamePtr).takeUnretainedValue() as String?,
+              // 获取可选择状态
+              let selectablePtr = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsSelectCapable),
+              // 获取启用状态
+              let enabledPtr = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsEnabled)
+        else {
+            return nil
+        }
+        
+        guard let selectableBool = Unmanaged<CFBoolean>.fromOpaque(selectablePtr).takeUnretainedValue() as? Bool,
+           let enabledBool = Unmanaged<CFBoolean>.fromOpaque(enabledPtr).takeUnretainedValue() as? Bool else {
+		return nil
+	}
+	let isSelectable = selectableBool
+	let isEnabled = enabledBool
+        
+        return InputSourceProperties(
+            sourceID: sourceID,
+            sourceType: sourceType,
+            localizedName: localizedName,
+            isSelectable: isSelectable,
+            isEnabled: isEnabled
+        )
+    }
+    
+    /// 检查输入源类型是否有效
+    /// - Parameter sourceType: 输入源类型
+    /// - Returns: 是否为有效的输入源类型
+    private static func isValidInputSourceType(_ sourceType: String) -> Bool {
+        sourceType == (kTISTypeKeyboardLayout as String) || sourceType == (kTISTypeKeyboardInputMode as String)
+    }
+
+    /// 获取当前输入法名称
+    /// - Returns: 当前输入法名称,失败返回空字符串
+    nonisolated static func getCurrentInputMethodName() -> String {
+        guard let currentSource = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue() else {
+            return ""
+        }
+
+        // 直接获取本地化名称
+        guard let namePtr = TISGetInputSourceProperty(currentSource, kTISPropertyLocalizedName),
+              let localizedName = Unmanaged<CFString>.fromOpaque(namePtr).takeUnretainedValue() as String? else {
+            return ""
+        }
+
+        return localizedName
+
+    }
+
+    /// 获取输入源图标
+    /// - Parameter source: 输入源
+    /// - Returns: 图标图像,失败返回nil
+    private static func getInputSourceIcon(_ source: TISInputSource) -> NSImage? {
+        // 获取图标 URL
+        guard let urlPtr = TISGetInputSourceProperty(source, kTISPropertyIconImageURL as CFString),
+              let cfUrl = Unmanaged<CFURL>.fromOpaque(urlPtr).takeUnretainedValue() as URL? else {
+            return nil
+        }
+        
+        return NSImage(contentsOf: cfUrl)
+    }
+
+    /// 检测当前输入法是否为 CJKV（中文/日文/韩文/越南文）
+    /// - Returns: 是否为 CJKV 输入法
+    static func isCJKVInputMethod() -> Bool {
+        guard let currentSource = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(),
+              let langPtr = TISGetInputSourceProperty(currentSource, kTISPropertyInputSourceLanguages),
+              let languages = Unmanaged<CFArray>.fromOpaque(langPtr).takeUnretainedValue() as? [String],
+              let lang = languages.first else {
+            return false
+        }
+        return lang == "zh" || lang.hasPrefix("zh-") || lang == "ja" || lang == "ko" || lang == "vi"
+    }
+}
