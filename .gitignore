@@ -27,18 +27,26 @@ Temporary Items
 .apdisk
 
 ### Xcode ###
-# Xcode
-#
-# gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
-
 ## User settings
 xcuserdata/
 
-## compatibility with Xcode 8 and earlier (ignoring not required starting Xcode 9)
+## Obj-C/Swift specific
+*.hmap
+
+## App packaging
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+## Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+## compatibility with Xcode 8 and earlier
 *.xcscmblueprint
 *.xccheckout
 
-## compatibility with Xcode 3 and earlier (ignoring not required starting Xcode 4)
+## compatibility with Xcode 3 and earlier
 build/
 DerivedData/
 *.moved-aside
@@ -62,14 +70,27 @@ DerivedData/
 *.xcodeproj
 *.xcworkspace
 
+### Swift Package Manager ###
+.build/
+
 ### Tuist derived files ###
 graph.dot
 Derived/
 
 ### Tuist managed dependencies ###
 Tuist/.build
-# Superpowers brainstorm temp files
+
+### Superpowers brainstorm temp files ###
 .superpowers/
 
-# Claude local config
+### Claude local config ###
 .claude/
+
+### Carthage ###
+Carthage/Build/
+
+### fastlane ###
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
