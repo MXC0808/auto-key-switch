@@ -1,49 +1,58 @@
 # AutoKeySwitch
 
-<div align="center">
+<p align="center">
+  <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.9-orange.svg" alt="Swift"></a>
+  <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13.0+-blue.svg" alt="Platform"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-green.svg" alt="License"></a>
+</p>
 
-[![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)](https://swift.org)
-[![Platform](https://img.shields.io/badge/Platform-macOS%2013.0+-blue.svg)](https://www.apple.com/macos/)
-[![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)](LICENSE)
+<p align="center">
+  <a href="README.zh-CN.md">中文文档</a> &nbsp;·&nbsp;
+  <a href="#installation">Installation</a> &nbsp;·&nbsp;
+  <a href="#usage">Usage</a>
+</p>
 
-[:cn: 中文文档](README.zh-CN.md) | [:package: Installation](#-installation) | [:book: Usage](#-usage)
-
+<p align="center">
 A lightweight, intelligent macOS input method auto-switcher that seamlessly switches input methods as you move between applications — so you never have to manually switch again.
+</p>
 
 > **Note:** This project is a modified version of [TypeSwitch](https://github.com/ygsgdbd/TypeSwitch), with SwiftUIX dependency removed and significant feature enhancements.
 
-## :sparkles: Features
+---
 
-- :repeat: **Auto Switch** — Automatically switch to your preset input method when changing applications
-- :iphone: **Menu Bar Control** — Quick access to running apps and input method switching right from the menu bar
-- :brain: **App Memory** — Remembers your last input method state per app and restores it when you switch back (up to 20 apps)
-- :pencil: **Force English Punctuation** — Output English punctuation even when using a CJKV input method in designated apps
-- :gear: **Per-App Rules** — Set independent input method preferences for each application
-- :rocket: **Launch at Login** — Optional auto-start when you log in
-- :eye: **Visibility Control** — Toggle menu bar icon and Dock icon visibility to match your workflow
+## Features
 
-## :wrench: System Requirements
+- **Auto Switch** — Automatically switch to your preset input method when changing applications
+- **Menu Bar Control** — Quick access to running apps and input method switching right from the menu bar
+- **App Memory** — Remembers your last input method state per app and restores it when you switch back (up to 20 apps)
+- **Force English Punctuation** — Output English punctuation even when using a CJKV input method in designated apps
+- **Per-App Rules** — Set independent input method preferences for each application
+- **Launch at Login** — Optional auto-start when you log in
+- **Visibility Control** — Toggle menu bar icon and Dock icon visibility to match your workflow
+
+## System Requirements
 
 - macOS 13.0 or later (compatible up to macOS 26)
 - Accessibility permission (for detecting application switches)
 - Input monitoring permission (for punctuation interception)
 
-## :package: Installation
+## Installation
 
 ### Build from Source
 
 1. Install [Tuist](https://github.com/tuist/tuist#install)
 
-2. Clone the repository
+2. Clone the repository and build:
+
    ```bash
    git clone https://github.com/MXC0808/AutoKeySwitch.git
    cd AutoKeySwitch
+   make run
    ```
 
-3. Build and run
+   Or step by step:
+
    ```bash
-   make run          # Generate, build and run the app
-   # Or step by step:
    make generate     # Generate Xcode project
    make build        # Build project
    make open         # Open the built app
@@ -59,7 +68,7 @@ tuist generate
 open AutoKeySwitch.xcworkspace
 ```
 
-## :book: Usage
+## Usage
 
 ### Menu Bar
 
@@ -72,123 +81,130 @@ open AutoKeySwitch.xcworkspace
 
 The main window provides three sections via sidebar navigation:
 
-| Section | Description |
-|---------|-------------|
-| **App Rules** | Manage input method preferences for each application |
-| **App Memory** | Enable memory for specific apps to restore their last input method state |
+| Section         | Description                                                    |
+|-----------------|----------------------------------------------------------------|
+| **App Rules**   | Manage input method preferences for each application           |
+| **App Memory**  | Enable memory for specific apps to restore their last input method state |
 | **Preferences** | Set global default input method, control menu bar/Dock icon visibility |
 
-### Keyboard Shortcuts
+## Privacy & Security
 
-| Shortcut | Action |
-|----------|--------|
-| `⌘ + 1` | Switch to App Rules tab |
-| `⌘ + 2` | Switch to App Memory tab |
-| `⌘ + 3` | Switch to Preferences tab |
-| `⌘ + O` | Open main window |
-| `⌘ + Q` | Quit application |
-
-## :lock: Privacy & Security
-
-AutoKeySwitch takes your privacy seriously:
-
-- :house: All data is stored locally — nothing is uploaded
-- :no_entry_sign: No user information or usage data is collected
-- :book: Fully open source for review
-- :shield: Permissions are used only for their stated purpose:
+- All data is stored locally — nothing is uploaded
+- No user information or usage data is collected
+- Fully open source for review
+- Permissions are used only for their stated purpose:
   - **Accessibility**: Detecting application switches
   - **Input Monitoring**: Intercepting punctuation keys (force English punctuation feature)
   - **Login Items**: Launching at startup
 
 ## Dependencies
 
-- [Defaults](https://github.com/sindresorhus/Defaults) (7.3.1) — Persistent settings storage
-- [SwifterSwift](https://github.com/SwifterSwift/SwifterSwift) (8.0.0) — Swift native extensions
-- [VisualEffects](https://github.com/ArcticLeon/VisualEffects) — SwiftUI blur effects
+| Package                                                                    | Version | Purpose                      |
+|----------------------------------------------------------------------------|---------|------------------------------|
+| [Defaults](https://github.com/sindresorhus/Defaults)                       | 7.3.1   | Persistent settings storage  |
+| [SwifterSwift](https://github.com/SwifterSwift/SwifterSwift)               | 8.0.0   | Swift native extensions      |
+| [VisualEffects](https://github.com/ArcticLeon/VisualEffects)               | 1.0.0+  | SwiftUI blur effects         |
+| [Tuist](https://github.com/tuist/tuist)                                    | -       | Project generation and management |
 
-Build tools:
-
-- [Tuist](https://github.com/tuist/tuist) — Project generation and management
-
-## Development
-
-### Requirements
-
-- Xcode 15.0+
-- Swift 5.9+
-- macOS 13.0+ (compatible up to macOS 26)
-- [Tuist](https://github.com/tuist/tuist)
-
-### Project Structure
+## Project Structure
 
 ```
 AutoKeySwitch/
-├── Project.swift                     # Tuist project configuration
-├── Tuist/                            # Tuist configuration
+├── Project.swift                          # Tuist project configuration
+├── Tuist/
 │   └── Signing/
-│       └── AutoKeySwitch.entitlements
+│       ├── AutoKeySwitch.entitlements
+│       └── AutoSwitchInput.entitlements
+├── Tuist.swift                            # Tuist configuration helpers
+├── Makefile                               # Build automation
+├── CLAUDE.md                              # Project instructions for AI
+│
 ├── AutoKeySwitch/
 │   └── Sources/
-│       ├── App/                      # App entry point
-│       │   └── AutoSwitchInputApp.swift
+│       ├── App/
+│       │   └── AutoSwitchInputApp.swift   # App entry point
+│       │
 │       ├── Core/
-│       │   ├── DesignSystem.swift    # Design tokens and theming
-│       │   ├── Models/               # Data models
+│       │   ├── DesignSystem.swift         # Design tokens and theming
+│       │   ├── Models/
 │       │   │   ├── AppInfo.swift
 │       │   │   ├── InputMethod.swift
 │       │   │   └── InputSourceProperties.swift
-│       │   └── Extensions/           # Swift extensions
+│       │   └── Extensions/
 │       │       ├── Defaults+Extensions.swift
 │       │       └── View+Border.swift
+│       │
 │       ├── Models/
-│       │   └── NavigationVM.swift    # Sidebar navigation model
+│       │   └── NavigationVM.swift          # Sidebar navigation model
+│       │
 │       ├── Services/
-│       │   ├── AppManagement/        # App discovery and listing
-│       │   │   ├── AppInfoService.swift
-│       │   │   └── AppListService.swift
-│       │   ├── InputMethod/          # Input method switching
+│       │   ├── AppManagement/
+│       │   │   ├── AppInfoService.swift    # App metadata discovery
+│       │   │   └── AppListService.swift    # Running app listing
+│       │   ├── InputMethod/
 │       │   │   ├── InputMethodManager.swift
 │       │   │   └── InputMethodService.swift
-│       │   ├── Punctuation/          # Force English punctuation
+│       │   ├── Punctuation/
 │       │   │   ├── PunctuationService.swift
 │       │   │   ├── InputSourceProviding.swift
 │       │   │   ├── KeyboardLayoutProviding.swift
 │       │   │   ├── KeyboardLayoutMapper.swift
 │       │   │   └── PermissionProviding.swift
-│       │   └── System/               # System services
+│       │   └── System/
 │       │       ├── AppVisibilityService.swift
 │       │       ├── ConfigurationExportService.swift
 │       │       ├── LaunchAtLoginService.swift
 │       │       └── PermissionService.swift
-│       └── UI/
-│           └── Views/
-│               ├── HUD/                   # Input method switch HUD
-│               │   └── InputMethodHUDView.swift
-│               └── MenuBar/               # Menu bar and main window views
-│                   ├── MainView.swift
-│                   ├── SidebarView.swift
-│                   ├── MenuBarView.swift
-│                   ├── AppSettingsTab.swift
-│                   ├── ConfiguredAppsView.swift
-│                   ├── RunningAppsView.swift
-│                   ├── MemoryConfigView.swift
-│                   ├── Memory/
-│                   │   ├── MemoryAppRowView.swift
-│                   │   ├── MemoryEnabledListView.swift
-│                   │   ├── MemoryToolbarView.swift
-│                   │   └── RunningAppCardView.swift
-│                   ├── PreferencesTab.swift
-│                   ├── SettingsView.swift
-│                   ├── AddAppSheet.swift
-│                   ├── AppRowView.swift
-│                   ├── ContentHeaderView.swift
-│                   └── ...
-├── AutoKeySwitchTests/                    # Test suite
+│       │
+│       └── UI/Views/
+│           ├── HUD/
+│           │   └── InputMethodHUDView.swift  # Switch overlay
+│           │
+│           └── MenuBar/
+│               ├── MainView.swift
+│               ├── SidebarView.swift
+│               ├── MenuBarView.swift
+│               ├── AppSettingsTab.swift
+│               ├── ConfiguredAppsView.swift
+│               ├── RunningAppsView.swift
+│               ├── MemoryConfigView.swift
+│               ├── Memory/
+│               │   ├── MemoryAppRowView.swift
+│               │   ├── MemoryEnabledListView.swift
+│               │   ├── MemoryToolbarView.swift
+│               │   └── RunningAppCardView.swift
+│               ├── PreferencesTab.swift
+│               ├── SettingsView.swift
+│               ├── AddAppSheet.swift
+│               ├── AppRowView.swift
+│               └── ContentHeaderView.swift
+│
+├── AutoKeySwitchTests/
 │   ├── UnitTests/
+│   │   ├── AppListServiceTests.swift
+│   │   ├── InputMethodManagerTests.swift
+│   │   ├── KeyboardLayoutMapperTests.swift
+│   │   └── PunctuationServiceLogicTests.swift
 │   ├── IntegrationTests/
+│   │   └── PunctuationServiceIntegrationTests.swift
 │   ├── Mocks/
-│   └── TestHelpers/
-└── Makefile                               # Build automation
+│   │   ├── MockInputSourceProvider.swift
+│   │   ├── MockKeyboardLayoutProvider.swift
+│   │   └── MockPermissionProvider.swift
+│   ├── TestHelpers/
+│   │   └── InputMethodTestHelpers.swift
+│   └── E2E/
+│       ├── ManualTestChecklist.md
+│       ├── punctuation_basic_test.scpt
+│       ├── shift_number_test.scpt
+│       └── run_e2e_tests.sh
+│
+├── docs/superpowers/
+│   ├── plans/        # Implementation plans
+│   └── specs/        # Design specifications
+│
+├── plans/            # General planning documents
+└── Screenshots/
 ```
 
 ## Contributing
