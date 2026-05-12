@@ -13,7 +13,7 @@ class PunctuationService: ObservableObject {
     /// 使用 nonisolated 存储以支持从 CGEvent 回调中访问
     private nonisolated(unsafe) var isEnabled = false
     private var eventTap: CFMachPort?
-	private var runLoopSource: CFRunLoopSource?
+    private var runLoopSource: CFRunLoopSource?
 
     /// 注入的依赖 — nonisolated(unsafe) 以支持 CGEvent 回调访问
     private nonisolated(unsafe) let permissionProvider: PermissionProviding
@@ -40,13 +40,10 @@ class PunctuationService: ObservableObject {
 
     // MARK: - Public API
 
-    /// 启用服务
-    /// - Returns: 是否成功启用
     @discardableResult
     func enable() -> Bool {
         guard !isEnabled else { return true }
 
-        // 使用注入的权限检查
         guard permissionProvider.checkAccessibility() else {
             Self.logger.error("Accessibility permission not granted")
             return false
@@ -62,7 +59,6 @@ class PunctuationService: ObservableObject {
         return success
     }
 
-    /// 禁用服务
     func disable() {
         guard isEnabled else { return }
 
@@ -77,14 +73,14 @@ class PunctuationService: ObservableObject {
     }
 
     deinit {
-    if let eventTap = eventTap {
-    CGEvent.tapEnable(tap: eventTap, enable: false)
-    CFMachPortInvalidate(eventTap)
+        if let eventTap = eventTap {
+            CGEvent.tapEnable(tap: eventTap, enable: false)
+            CFMachPortInvalidate(eventTap)
+        }
+        if let runLoopSource = runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+        }
     }
-     if let runLoopSource = runLoopSource {
-			CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
-		}
-	}
 
     // MARK: - Internal Helpers (testable)
 
@@ -131,11 +127,11 @@ class PunctuationService: ObservableObject {
         let eventMask = (1 << CGEventType.keyDown.rawValue)
 
         let callback: CGEventTapCallBack = { proxy, type, event, refcon in
-        guard let refcon = refcon else {
-        return Unmanaged.passUnretained(event)
-        }
-        let service = Unmanaged<PunctuationService>.fromOpaque(refcon).takeUnretainedValue()
-        return service.handleKeyEvent(proxy: proxy, type: type, event: event)
+            guard let refcon = refcon else {
+                return Unmanaged.passUnretained(event)
+            }
+            let service = Unmanaged<PunctuationService>.fromOpaque(refcon).takeUnretainedValue()
+            return service.handleKeyEvent(proxy: proxy, type: type, event: event)
         }
 
         // Try different event tap configurations for better compatibility
@@ -157,10 +153,10 @@ class PunctuationService: ObservableObject {
             )
 
             if let eventTap = eventTap {
-            let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
-            runLoopSource = source
-            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
-				CGEvent.tapEnable(tap: eventTap, enable: true)
+                let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
+                runLoopSource = source
+                CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
+                CGEvent.tapEnable(tap: eventTap, enable: true)
                 Self.logger.info("Event tap created successfully using \(config.description)")
                 return true
             } else {
@@ -175,17 +171,17 @@ class PunctuationService: ObservableObject {
     }
 
     private func stopMonitoring() {
-    if let eventTap = eventTap {
-    CGEvent.tapEnable(tap: eventTap, enable: false)
-    CFMachPortInvalidate(eventTap)
-    self.eventTap = nil
+        if let eventTap = eventTap {
+            CGEvent.tapEnable(tap: eventTap, enable: false)
+            CFMachPortInvalidate(eventTap)
+            self.eventTap = nil
+        }
+        if let runLoopSource = runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+            self.runLoopSource = nil
+        }
+        Self.logger.debug("Event tap disabled and invalidated")
     }
-    if let runLoopSource = runLoopSource {
-      CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
-			self.runLoopSource = nil
-		}
-		Self.logger.debug("Event tap disabled and invalidated")
-	}
 
     private func createReplacementEvent(originalEvent: CGEvent, replacement: String) -> CGEvent? {
         let originalKeyCode = CGKeyCode(originalEvent.getIntegerValueField(.keyboardEventKeycode))
