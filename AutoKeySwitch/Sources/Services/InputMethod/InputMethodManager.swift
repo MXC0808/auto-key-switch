@@ -209,30 +209,16 @@ static let shared = InputMethodManager()
     /// - Parameter bundleId: 应用 bundleId
     /// - Returns: 目标输入法 ID
     private func determineTargetInputMethod(for bundleId: String) -> String? {
-    // 优先级 1：上次状态（仅当启用记忆时）
-    if memoryEnabledApps.contains(bundleId),
-    let lastState = lastInputMethodStates[bundleId] {
-    return lastState
+        InputMethodResolver.resolve(
+            bundleId: bundleId,
+            memoryEnabledApps: memoryEnabledApps,
+            lastInputMethodStates: lastInputMethodStates,
+            appInputMethodSettings: Defaults[.appInputMethodSettings],
+            installedApps: installedApps,
+            nameMatchingRules: Defaults[.appNameMatchingRules],
+            defaultInputMethod: defaultInputMethod
+        )
     }
-
-    // 优先级 2：手动配置（bundleId 精确匹配）
-    if let manualConfig = Defaults[.appInputMethodSettings][bundleId] {
-    return manualConfig
-    }
-
-    // 优先级 3：名称模糊匹配
-    if let appName = installedApps.first(where: { $0.bundleId == bundleId })?.name {
-      let nameRules = Defaults[.appNameMatchingRules]
-			for (pattern, inputMethodId) in nameRules {
-				if appName.localizedCaseInsensitiveContains(pattern) {
-					return inputMethodId
-				}
-			}
-		}
-
-		// 优先级 4：全局默认
-		return defaultInputMethod
-	}
 
     /// 处理应用激活事件
     private func handleAppActivation(_ notification: Notification) async {
