@@ -14,9 +14,9 @@ enum Constants {
 
 @MainActor
 final class InputMethodManager: ObservableObject {
-static let shared = InputMethodManager()
-	private static let logger = Logger(subsystem: "com.autokeyswitch", category: "InputMethodManager")
-    
+    static let shared = InputMethodManager()
+    private static let logger = Logger(subsystem: "com.autokeyswitch", category: "InputMethodManager")
+
     @Published var inputMethods: [InputMethod] = []
     @Published var installedApps: [AppInfo] = []
     @Published var runningApps: [AppInfo] = []
@@ -33,10 +33,10 @@ static let shared = InputMethodManager()
     /// 强制英文符号服务是否成功启用（用于 UI 显示权限状态）
     @Published private(set) var punctuationServiceEnabled = false
 
-	/// Last input method switch error (nil if last switch succeeded)
-	@Published var lastSwitchError: String?
+    /// Last input method switch error (nil if last switch succeeded)
+    @Published var lastSwitchError: String?
 
-	// MARK: - Memory Feature Properties
+    // MARK: - Memory Feature Properties
 
     /// 记忆功能开关（按应用）- 持久化
     /// 开关状态需要持久化，否则用户每次启动都要重新配置
@@ -59,11 +59,10 @@ static let shared = InputMethodManager()
 
     // UI 状态
     @Published private(set) var settingsVersion: UUID = UUID()  // 跟踪设置变化以触发 UI 更新
-    
-    
+
     // 存储订阅
     private var cancellables: Set<AnyCancellable> = []
-    
+
     private init() {
         // 初始化标点符号服务
         punctuationService = PunctuationService()
@@ -81,13 +80,13 @@ static let shared = InputMethodManager()
         }
         setupSubscriptions()
     }
-    
+
     deinit {
         // cancellables 会在对象销毁时自动清理
     }
-    
+
     // MARK: - Setup
-    
+
     private func setupSubscriptions() {
         // 监听输入法变化
         DistributedNotificationCenter.default()
@@ -101,20 +100,20 @@ static let shared = InputMethodManager()
             }
             .store(in: &cancellables)
 
-            // 监听键盘布局变化
-	DistributedNotificationCenter.default()
-		.publisher(for: NSNotification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String))
-		.receive(on: DispatchQueue.main)
-		.debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
-		.sink { [weak self] _ in
-			KeyboardLayoutMapper.onKeyboardLayoutChanged()
-			Task { @MainActor in
-				await self?.refreshInputMethods()
-			}
-		}
-		.store(in: &cancellables)
+        // 监听键盘布局变化
+        DistributedNotificationCenter.default()
+            .publisher(for: NSNotification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String))
+            .receive(on: DispatchQueue.main)
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                KeyboardLayoutMapper.onKeyboardLayoutChanged()
+                Task { @MainActor in
+                    await self?.refreshInputMethods()
+                }
+            }
+            .store(in: &cancellables)
 
-	// 监听应用启动通知
+        // 监听应用启动通知
         NSWorkspace.shared.notificationCenter
             .publisher(for: NSWorkspace.didLaunchApplicationNotification)
             .receive(on: DispatchQueue.main)
@@ -125,7 +124,7 @@ static let shared = InputMethodManager()
                 }
             }
             .store(in: &cancellables)
-        
+
         // 监听应用退出通知
         NSWorkspace.shared.notificationCenter
             .publisher(for: NSWorkspace.didTerminateApplicationNotification)
@@ -137,7 +136,7 @@ static let shared = InputMethodManager()
                 }
             }
             .store(in: &cancellables)
-        
+
         // 监听应用激活通知
         NSWorkspace.shared.notificationCenter
             .publisher(for: NSWorkspace.didActivateApplicationNotification)
@@ -150,9 +149,9 @@ static let shared = InputMethodManager()
             }
             .store(in: &cancellables)
     }
-    
+
     // MARK: - Public Methods
-    
+
     func refreshAllData() async {
         await withTaskGroup(of: Void.self) { group in
             group.addTask { await self.refreshInputMethods() }
@@ -160,16 +159,16 @@ static let shared = InputMethodManager()
             group.addTask { await self.refreshRunningApps() }
         }
     }
-    
+
     func refreshInputMethods() async {
         do {
             let methods = try InputMethodService.fetchInputMethods()
             self.inputMethods = methods
         } catch {
-        Self.logger.error("Failed to fetch input methods: \(error.localizedDescription)")
+            Self.logger.error("Failed to fetch input methods: \(error.localizedDescription)")
         }
     }
-    
+
     /// 刷新已安装的应用（仅在需要时调用）
     func refreshInstalledApps() async {
         // 避免重复加载
@@ -183,12 +182,12 @@ static let shared = InputMethodManager()
         installedApps = await AppListService.fetchInstalledApps()
         hasLoadedInstalledApps = true
     }
-    
+
     /// 刷新运行中的应用
     func refreshRunningApps() async {
         runningApps = await AppListService.fetchRunningApps()
     }
-    
+
     // MARK: - Private Methods
 
     /// 记录正在离开的应用的输入法状态
@@ -250,10 +249,14 @@ static let shared = InputMethodManager()
             do {
                 try InputMethodService.switchToInputMethod(targetId)
                 lastSwitchError = nil
-				let name = inputMethods.first(where: { $0.id == targetId })?.name ?? targetId
-				NotificationCenter.default.post(name: .inputMethodDidSwitch, object: nil, userInfo: ["inputMethodName": name])
+                let name = inputMethods.first(where: { $0.id == targetId })?.name ?? targetId
+                NotificationCenter.default.post(
+                    name: .inputMethodDidSwitch,
+                    object: nil,
+                    userInfo: ["inputMethodName": name]
+                )
             } catch {
-            lastSwitchError = error.localizedDescription
+                lastSwitchError = error.localizedDescription
             }
         }
 
@@ -261,42 +264,42 @@ static let shared = InputMethodManager()
         updatePunctuationService(for: bundleId)
     }
 
-        /// 更新标点符号服务状态
-        private func updatePunctuationService(for bundleId: String) {
+    /// 更新标点符号服务状态
+    private func updatePunctuationService(for bundleId: String) {
         guard Defaults[.forceEnglishPunctuationEnabled],
-        Defaults[.forceEnglishPunctuationApps].contains(bundleId) else {
-        punctuationService?.disable()
-        punctuationServiceEnabled = false
+              Defaults[.forceEnglishPunctuationApps].contains(bundleId) else {
+            punctuationService?.disable()
+            punctuationServiceEnabled = false
             return
         }
-            punctuationServiceEnabled = punctuationService?.enable() ?? false
-            }
-
-            /// 公开方法：立即更新标点符号服务状态（用于 UI 勾选时调用）
-    func updatePunctuationServiceState() {
-    guard let bundleId = currentActiveAppBundleId else { return }
-    updatePunctuationService(for: bundleId)
+        punctuationServiceEnabled = punctuationService?.enable() ?? false
     }
 
-	/// Toggle between the first two available input methods
-	func toggleCurrentInputMethod() {
-		guard inputMethods.count >= 2 else { return }
-		guard let currentId = try? InputMethodService.getCurrentInputMethodId() else { return }
-		let currentIndex = inputMethods.firstIndex(where: { $0.id == currentId }) ?? 0
-		let nextIndex = (currentIndex + 1) % inputMethods.count
-		let targetMethod = inputMethods[nextIndex]
-		do {
-			try InputMethodService.switchToInputMethod(targetMethod.id)
-			lastSwitchError = nil
-		} catch {
-			lastSwitchError = error.localizedDescription
-		}
-	}
+    /// 公开方法：立即更新标点符号服务状态（用于 UI 勾选时调用）
+    func updatePunctuationServiceState() {
+        guard let bundleId = currentActiveAppBundleId else { return }
+        updatePunctuationService(for: bundleId)
+    }
+
+    /// Toggle between the first two available input methods
+    func toggleCurrentInputMethod() {
+        guard inputMethods.count >= 2 else { return }
+        guard let currentId = try? InputMethodService.getCurrentInputMethodId() else { return }
+        let currentIndex = inputMethods.firstIndex(where: { $0.id == currentId }) ?? 0
+        let nextIndex = (currentIndex + 1) % inputMethods.count
+        let targetMethod = inputMethods[nextIndex]
+        do {
+            try InputMethodService.switchToInputMethod(targetMethod.id)
+            lastSwitchError = nil
+        } catch {
+            lastSwitchError = error.localizedDescription
+        }
+    }
 
     /// 设置应用的输入法
     func setInputMethod(for app: AppInfo, to inputMethodId: String?) {
         var settings = Defaults[.appInputMethodSettings]
-        
+
         if let inputMethodId = inputMethodId {
             // 设置输入法
             settings[app.bundleId] = inputMethodId
@@ -304,18 +307,18 @@ static let shared = InputMethodManager()
             // 移除输入法设置
             settings.removeValue(forKey: app.bundleId)
         }
-        
+
         Defaults[.appInputMethodSettings] = settings
         settingsVersion = UUID()
     }
-    
+
     /// 获取应用的输入法ID
     func getInputMethod(for app: AppInfo) -> String? {
         return Defaults[.appInputMethodSettings][app.bundleId] ?? nil
     }
-    
+
     // MARK: - UI Helper Methods
-    
+
     /// 获取已配置输入法的应用列表
     var configuredApps: [AppInfo] {
         let settings = Defaults[.appInputMethodSettings]
@@ -323,55 +326,55 @@ static let shared = InputMethodManager()
             settings[app.bundleId] != nil
         }
     }
-    
+
     /// 获取应用选中的输入法名称
     func getSelectedInputMethodName(for app: AppInfo) -> String? {
-    // 依赖于 settingsVersion 以确保设置变化时 UI 更新
-    _ = settingsVersion
+        // 依赖于 settingsVersion 以确保设置变化时 UI 更新
+        _ = settingsVersion
 
-    guard let inputMethodId = getInputMethod(for: app), !inputMethodId.isEmpty else {
-    return nil
-    }
+        guard let inputMethodId = getInputMethod(for: app), !inputMethodId.isEmpty else {
+            return nil
+        }
 
-    return inputMethods.first(where: { $0.id == inputMethodId })?.name
+        return inputMethods.first(where: { $0.id == inputMethodId })?.name
     }
 
     /// 获取应用规则列表显示的应用（已配置 + 运行中未配置）
-	var appRulesListApps: [AppInfo] {
-		// 已配置的应用
-		let configuredApps = installedApps.filter { app in
-			getInputMethod(for: app) != nil
-		}
-		// 运行中未配置的应用
-		let runningUnconfigured = runningApps.filter { app in
-			getInputMethod(for: app) == nil
-		}
-		// 合并去重
-		var seen = Set<String>()
-		let allApps = (configuredApps + runningUnconfigured).filter { app in
-			if seen.contains(app.bundleId) {
-				return false
-			}
-			seen.insert(app.bundleId)
-			return true
-		}
-		// 排序：已配置在前，运行中未配置在后
-		return allApps.sorted { app1, app2 in
-			let app1Configured = getInputMethod(for: app1) != nil
-			let app2Configured = getInputMethod(for: app2) != nil
-			if app1Configured != app2Configured {
-				return app1Configured
-			}
-			return app1.name.localizedCompare(app2.name) == .orderedAscending
-		}
-	}
+    var appRulesListApps: [AppInfo] {
+        // 已配置的应用
+        let configuredApps = installedApps.filter { app in
+            getInputMethod(for: app) != nil
+        }
+        // 运行中未配置的应用
+        let runningUnconfigured = runningApps.filter { app in
+            getInputMethod(for: app) == nil
+        }
+        // 合并去重
+        var seen = Set<String>()
+        let allApps = (configuredApps + runningUnconfigured).filter { app in
+            if seen.contains(app.bundleId) {
+                return false
+            }
+            seen.insert(app.bundleId)
+            return true
+        }
+        // 排序：已配置在前，运行中未配置在后
+        return allApps.sorted { app1, app2 in
+            let app1Configured = getInputMethod(for: app1) != nil
+            let app2Configured = getInputMethod(for: app2) != nil
+            if app1Configured != app2Configured {
+                return app1Configured
+            }
+            return app1.name.localizedCompare(app2.name) == .orderedAscending
+        }
+    }
 
-	/// 检查应用是否在规则列表中
-	func isAppInRulesList(_ app: AppInfo) -> Bool {
-		return getInputMethod(for: app) != nil || runningApps.contains(where: { $0.bundleId == app.bundleId })
-	}
+    /// 检查应用是否在规则列表中
+    func isAppInRulesList(_ app: AppInfo) -> Bool {
+        return getInputMethod(for: app) != nil || runningApps.contains(where: { $0.bundleId == app.bundleId })
+    }
 
-	// MARK: - Default Input Method
+    // MARK: - Default Input Method
 
     /// Set global default input method
     func setDefaultInputMethod(_ inputMethodId: String?) {
