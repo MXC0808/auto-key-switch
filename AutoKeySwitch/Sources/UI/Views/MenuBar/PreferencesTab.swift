@@ -20,129 +20,115 @@ struct PreferencesTab: View {
     @State private var showHUDOnSwitch = Defaults[.showHUDOnSwitch]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
             Text("偏好设置")
                 .font(.headline)
 
-            GroupBox("启动") {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Toggle("登录时启动", isOn: $isLaunchAtLoginEnabled)
-                            .toggleStyle(.switch)
-                            .focusable(false)
-                        Spacer()
-                        Image(systemName: "questionmark.circle")
-                            .foregroundStyle(.secondary)
-                            .help("在系统登录时自动启动应用")
-                    }
-                    .onChange(of: isLaunchAtLoginEnabled) { newValue in
-                        _ = LaunchAtLoginService.setLaunchAtLogin(newValue)
-                    }
+            // 通用
+            PreferenceSectionCard(title: "通用") {
+                PreferenceToggleRow(
+                    title: "登录时启动",
+                    description: "系统登录时自动启动应用",
+                    isOn: $isLaunchAtLoginEnabled
+                )
+                .onChange(of: isLaunchAtLoginEnabled) { newValue in
+                    _ = LaunchAtLoginService.setLaunchAtLogin(newValue)
                 }
-                .padding(4)
+
+                PreferenceToggleRow(
+                    title: "切换输入法时显示弹窗提示",
+                    description: "切换输入法时显示 HUD 提示",
+                    isOn: $showHUDOnSwitch
+                )
+                .onChange(of: showHUDOnSwitch) { newValue in
+                    Defaults[.showHUDOnSwitch] = newValue
+                }
             }
 
-            GroupBox("显示") {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Toggle("隐藏菜单栏图标", isOn: $isMenuBarHidden)
-                            .toggleStyle(.switch)
-                            .focusable(false)
-                        Spacer()
-                        Image(systemName: "questionmark.circle")
-                            .foregroundStyle(.secondary)
-                            .help("隐藏后可通过 Dock 图标访问应用")
-                    }
-                    .onChange(of: isMenuBarHidden) { newValue in
-                        AppVisibilityService.isMenuBarHidden = newValue
-                        showRestartAlert = true
-                    }
-
-                    HStack {
-                        Toggle("隐藏 Dock 图标", isOn: $isDockHidden)
-                            .toggleStyle(.switch)
-                            .focusable(false)
-                        Spacer()
-                        Image(systemName: "questionmark.circle")
-                            .foregroundStyle(.secondary)
-                            .help("隐藏后仅通过菜单栏图标访问应用")
-                    }
-                    .onChange(of: isDockHidden) { newValue in
-                        AppVisibilityService.isDockHidden = newValue
-                    }
+            // 显示
+            PreferenceSectionCard(title: "显示") {
+                PreferenceToggleRow(
+                    title: "隐藏菜单栏图标",
+                    description: "隐藏后可通过 Dock 图标访问应用",
+                    isOn: $isMenuBarHidden
+                )
+                .onChange(of: isMenuBarHidden) { newValue in
+                    AppVisibilityService.isMenuBarHidden = newValue
+                    showRestartAlert = true
                 }
-                .padding(4)
+
+                PreferenceToggleRow(
+                    title: "隐藏 Dock 图标",
+                    description: "隐藏后仅通过菜单栏图标访问应用",
+                    isOn: $isDockHidden
+                )
+                .onChange(of: isDockHidden) { newValue in
+                    AppVisibilityService.isDockHidden = newValue
+                }
             }
 
-            GroupBox("提示") {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Toggle("切换输入法时显示弹窗提示", isOn: $showHUDOnSwitch)
-                            .toggleStyle(.switch)
-                            .focusable(false)
-                        Spacer()
+            // 高级
+            PreferenceSectionCard(title: "高级") {
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
+                        Text("强制英文符号")
+                            .font(DesignTokens.Typography.cardTitle)
+                        Text("中文输入法下自动将标点符号转换为英文")
+                            .font(DesignTokens.Typography.cardSubtitle)
+                            .foregroundStyle(.secondary)
                     }
-                    .onChange(of: showHUDOnSwitch) { newValue in
-                        Defaults[.showHUDOnSwitch] = newValue
-                    }
-                }
-                .padding(4)
-            }
 
-            GroupBox("强制英文符号") {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Toggle("启用功能", isOn: $forceEnglishPunctuationEnabled)
-                            .toggleStyle(.switch)
-                            .focusable(false)
-                        Spacer()
-                        Button(action: { showHelpPopover = true }) {
-                            Image(systemName: "questionmark.circle")
+                    Spacer()
+
+                    Button(action: { showHelpPopover = true }) {
+                        Image(systemName: "questionmark.circle")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
+                    .popover(isPresented: $showHelpPopover, arrowEdge: .trailing) {
+                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                            Text("功能说明")
+                                .font(.headline)
+                            Text("在中文输入法下自动将标点符号转换为英文。")
+                            Text("需先开启此开关，然后在「应用规则」中开启特定应用。")
                                 .foregroundStyle(.secondary)
                         }
-                        .buttonStyle(.plain)
-                        .focusable(false)
-                        .popover(isPresented: $showHelpPopover, arrowEdge: .trailing) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("功能说明")
-                                    .font(.headline)
-                                Text("在中文输入法下自动将标点符号转换为英文。")
-                                Text("需先开启此开关，然后在「应用规则」中开启特定应用。")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding()
-                            .frame(width: 250)
-                        }
-                    }
-                    .onChange(of: forceEnglishPunctuationEnabled) { newValue in
-                        if isConfirmingForcePunctuation {
-                            isConfirmingForcePunctuation = false
-                            return
-                        }
-                        if newValue {
-                            forceEnglishPunctuationEnabled = false
-                            showForcePunctuationConfirmation = true
-                        } else {
-                            Defaults[.forceEnglishPunctuationEnabled] = false
-                            viewModel.updatePunctuationServiceState()
-                        }
+                        .padding()
+                        .frame(width: 250)
                     }
 
-                    if forceEnglishPunctuationEnabled && !hasAccessibilityPermission {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
-                            Text("需要「辅助功能」权限才能工作")
-                            Button("打开系统设置") {
-                                PermissionService.openAccessibilitySettings()
-                            }
-                            .buttonStyle(.link)
-                            .focusable(false)
-                        }
-                        .font(.caption)
+                    Toggle("", isOn: $forceEnglishPunctuationEnabled)
+                        .toggleStyle(.switch)
+                        .focusable(false)
+                }
+                .onChange(of: forceEnglishPunctuationEnabled) { newValue in
+                    if isConfirmingForcePunctuation {
+                        isConfirmingForcePunctuation = false
+                        return
+                    }
+                    if newValue {
+                        forceEnglishPunctuationEnabled = false
+                        showForcePunctuationConfirmation = true
+                    } else {
+                        Defaults[.forceEnglishPunctuationEnabled] = false
+                        viewModel.updatePunctuationServiceState()
                     }
                 }
-                .padding(4)
+
+                if forceEnglishPunctuationEnabled && !hasAccessibilityPermission {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text("需要「辅助功能」权限才能工作")
+                        Button("打开系统设置") {
+                            PermissionService.openAccessibilitySettings()
+                        }
+                        .buttonStyle(.link)
+                        .focusable(false)
+                    }
+                    .font(.caption)
+                }
             }
 
             HStack {
@@ -154,8 +140,6 @@ struct PreferencesTab: View {
                     showImportConfirmation = true
                 }
             }
-            .padding(.horizontal)
-            .padding(.bottom)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -237,6 +221,62 @@ struct PreferencesTab: View {
             viewModel.updatePunctuationServiceState()
         } catch {
             showImportError = true
+        }
+    }
+}
+
+// MARK: - Section Card Components
+
+private struct PreferenceSectionCard<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(title)
+                    .font(DesignTokens.Typography.sectionHeader)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, DesignTokens.Spacing.md)
+            .padding(.vertical, DesignTokens.Spacing.sm)
+            .background(DesignTokens.Colors.background.opacity(0.5))
+
+            VStack(spacing: DesignTokens.Spacing.md) {
+                content
+            }
+            .padding(DesignTokens.Spacing.md)
+        }
+        .background(DesignTokens.Colors.background)
+        .overlay {
+            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+                .stroke(DesignTokens.Colors.divider, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg))
+    }
+}
+
+private struct PreferenceToggleRow: View {
+    let title: String
+    let description: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
+                Text(title)
+                    .font(DesignTokens.Typography.cardTitle)
+                Text(description)
+                    .font(DesignTokens.Typography.cardSubtitle)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: $isOn)
+                .toggleStyle(.switch)
+                .focusable(false)
         }
     }
 }
