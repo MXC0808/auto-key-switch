@@ -14,6 +14,9 @@ extension Defaults.Keys {
     /// Global default input method
     nonisolated static let defaultInputMethod = Key<String?>("defaultInputMethod", default: nil, suite: appGroupSuite)
 
+    /// Whether automatic input method switching is enabled
+    nonisolated static let isAutoSwitchEnabled = Key<Bool>("isAutoSwitchEnabled", default: true, suite: appGroupSuite)
+
     /// Apps with input method memory feature enabled
     /// Format: `Set<String>` where String is bundleId
     nonisolated static let memoryEnabledApps = Key<Set<String>>("memoryEnabledApps", default: [], suite: appGroupSuite)

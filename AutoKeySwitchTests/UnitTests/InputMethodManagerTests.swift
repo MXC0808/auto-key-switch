@@ -117,4 +117,17 @@ struct InputMethodManagerTests {
         manager.setMemoryEnabled(for: app, enabled: false)
         #expect(!manager.isMemoryEnabled(for: app))
     }
+
+    @Test("isAutoSwitchEnabled defaults to true and can be changed")
+    @MainActor
+    func testIsAutoSwitchEnabledDefaultsToTrue() {
+        let originalValue = Defaults[.isAutoSwitchEnabled]
+        Defaults[.isAutoSwitchEnabled] = true
+        #expect(Defaults[.isAutoSwitchEnabled])
+
+        Defaults[.isAutoSwitchEnabled] = false
+        #expect(!Defaults[.isAutoSwitchEnabled])
+
+        Defaults[.isAutoSwitchEnabled] = originalValue
+    }
 }
