@@ -241,6 +241,12 @@ final class InputMethodManager: ObservableObject {
             return
         }
 
+        // 4.5 全局自动切换关闭时跳过自动切换，仍更新标点符号服务
+        guard Defaults[.isAutoSwitchEnabled] else {
+            updatePunctuationService(for: bundleId)
+            return
+        }
+
         // 5. 确定目标输入法（优先级：上次状态 > 手动配置 > 全局默认）
         let targetInputMethodId = determineTargetInputMethod(for: bundleId)
 

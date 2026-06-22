@@ -130,4 +130,18 @@ struct InputMethodManagerTests {
 
         Defaults[.isAutoSwitchEnabled] = originalValue
     }
+
+    @Test("auto-switch enabled setting is restored after mutation")
+    @MainActor
+    func testAutoSwitchEnabledSettingRestoresAfterMutation() {
+        let originalValue = Defaults[.isAutoSwitchEnabled]
+
+        Defaults[.isAutoSwitchEnabled] = false
+        #expect(Defaults[.isAutoSwitchEnabled] == false)
+
+        Defaults[.isAutoSwitchEnabled] = true
+        #expect(Defaults[.isAutoSwitchEnabled] == true)
+
+        Defaults[.isAutoSwitchEnabled] = originalValue
+    }
 }
