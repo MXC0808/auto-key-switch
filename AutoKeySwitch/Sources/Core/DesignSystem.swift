@@ -25,7 +25,7 @@ enum DesignTokens {
 		static let md: CGFloat = 6
 		static let lg: CGFloat = 8
 		static let xl: CGFloat = 12
-        static let pill: CGFloat = 20
+		static let pill: CGFloat = 20
 	}
 
 	// MARK: - Animation
@@ -50,10 +50,10 @@ enum DesignTokens {
 		static let sidebarPressedBackground = Color.gray.opacity(0.1)
 		static let cardHoverBackground = Color.blue.opacity(0.08)
 		static let warningBackground = Color.yellow.opacity(0.08)
-        static let hudEnglishIndicator = Color(red: 0.42, green: 0.66, blue: 0.86)
-        static let hudChineseIndicator = Color.orange
-        static let statusRunning = Color.green
-        static let destructive = Color(red: 1.0, green: 0.42, blue: 0.42)
+		static let hudEnglishIndicator = Color(red: 0.42, green: 0.66, blue: 0.86)
+		static let hudChineseIndicator = Color.orange
+		static let statusRunning = Color.green
+		static let destructive = Color(red: 1.0, green: 0.42, blue: 0.42)
 	}
 
 	// MARK: - Typography
@@ -66,13 +66,13 @@ enum DesignTokens {
 		static let contentHeaderIcon: Font = .system(size: 18, weight: .medium)
 		static let contentHeaderTitle: Font = .system(size: 12, weight: .semibold)
 		static let contentHeaderSubtitle: Font = .system(size: 11)
-        static let cardTitle: Font = .system(size: 13, weight: .medium)
-        static let cardSubtitle: Font = .system(size: 10)
-        static let badgeText: Font = .system(size: 10)
-        static let sectionHeader: Font = .system(size: 12, weight: .medium)
-        static let menuItemTitle: Font = .system(size: 13, weight: .medium)
-        static let menuItemSubtitle: Font = .system(size: 10)
-        static let hudText: Font = .system(size: 15, weight: .medium)
+		static let cardTitle: Font = .system(size: 13, weight: .medium)
+		static let cardSubtitle: Font = .system(size: 10)
+		static let badgeText: Font = .system(size: 10)
+		static let sectionHeader: Font = .system(size: 12, weight: .medium)
+		static let menuItemTitle: Font = .system(size: 13, weight: .medium)
+		static let menuItemSubtitle: Font = .system(size: 10)
+		static let hudText: Font = .system(size: 15, weight: .medium)
 	}
 
 	// MARK: - Sizes

@@ -269,7 +269,7 @@ private struct PreferenceToggleRow: View {
                     .font(DesignTokens.Typography.cardTitle)
                 Text(description)
                     .font(DesignTokens.Typography.cardSubtitle)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
             }
 
             Spacer()

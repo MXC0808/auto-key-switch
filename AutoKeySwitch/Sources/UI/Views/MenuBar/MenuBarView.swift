@@ -70,11 +70,20 @@ struct MenuBarView: View {
 
                 HStack(spacing: DesignTokens.Spacing.xs) {
                     ForEach(viewModel.inputMethods) { method in
+                        let isActive = viewModel.defaultInputMethod == method.id
                         Button(method.name) {
                             viewModel.setDefaultInputMethod(method.id)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .buttonStyle(.plain)
+                        .font(DesignTokens.Typography.badgeText)
+                        .padding(.horizontal, DesignTokens.Spacing.md)
+                        .padding(.vertical, DesignTokens.Spacing.xs)
+                        .background(isActive ? Color.accentColor.opacity(0.15) : DesignTokens.Colors.background)
+                        .foregroundColor(isActive ? .accentColor : .primary)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(isActive ? Color.accentColor.opacity(0.3) : DesignTokens.Colors.divider, lineWidth: 1)
+                        )
                         .focusable(false)
                     }
                 }
@@ -123,10 +132,6 @@ private struct MenuBarCurrentAppView: View {
             }
 
             Spacer()
-
-            Text("⌘1")
-                .font(DesignTokens.Typography.badgeText)
-                .foregroundStyle(.tertiary)
         }
         .padding(DesignTokens.Spacing.md)
         .background(Color.accentColor.opacity(0.06))

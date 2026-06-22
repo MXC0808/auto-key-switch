@@ -42,15 +42,19 @@ struct MemoryAppRowView: View {
             if isRunning {
                 MemoryStatusBadge(title: "● 运行中", color: DesignTokens.Colors.statusRunning)
             } else if isEnabled {
-                MemoryStatusBadge(title: "未运行", color: .secondary)
+                MemoryStatusBadge(title: "未运行", color: .secondary, backgroundOpacity: 0.08)
             }
 
             if isEnabled {
                 MemoryStatusBadge(title: "已启用", color: .accentColor)
-            } else if isRunning && !isAdded {
+            } else if isRunning && isAdded {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.green)
+            } else if isRunning {
                 Button(action: {
-                    onAdd()
                     isAdded = true
+                    onAdd()
                 }) {
                     Image(systemName: "plus.circle.fill")
                         .font(.title3)
@@ -59,10 +63,6 @@ struct MemoryAppRowView: View {
                 .buttonStyle(.plain)
                 .focusable(false)
                 .accessibilityLabel("启用 \(app.name) 的记忆功能")
-            } else if isRunning && isAdded {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(.green)
             }
 
             if isHovered && isEnabled {
@@ -104,12 +104,16 @@ struct MemoryAppRowView: View {
                 isHovered = hovering
             }
         }
+        .onChange(of: isEnabled) { newValue in
+            if !newValue { isAdded = false }
+        }
     }
 }
 
 private struct MemoryStatusBadge: View {
     let title: String
     let color: Color
+    var backgroundOpacity: Double = 0.12
 
     var body: some View {
         Text(title)
@@ -117,7 +121,7 @@ private struct MemoryStatusBadge: View {
             .foregroundStyle(color)
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .padding(.vertical, DesignTokens.Spacing.xs)
-            .background(color.opacity(0.12))
+            .background(color.opacity(backgroundOpacity))
             .cornerRadius(DesignTokens.CornerRadius.sm)
     }
 }
