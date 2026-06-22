@@ -2,90 +2,100 @@ import SwiftUI
 import AppKit
 import Defaults
 
+struct MemoryDisplayApp: Identifiable {
+    let app: AppInfo
+    let isRunning: Bool
+    let isEnabled: Bool
+
+    var id: String { app.bundleId }
+}
+
 /// Short-term memory configuration main interface
 struct MemoryConfigView: View {
     @EnvironmentObject private var viewModel: InputMethodManager
     @State private var selectedApps: Set<String> = []
     @State private var showClearConfirmation = false
     @State private var showLimitAlert = false
-    @State private var scrollTargetId: String? = nil
+    @State private var searchText = ""
+
+    private var unifiedApps: [MemoryDisplayApp] {
+        let runningBundleIds = Set(viewModel.runningApps.map(\.bundleId))
+        let runningApps = viewModel.runningApps.map { app in
+            MemoryDisplayApp(app: app, isRunning: true, isEnabled: viewModel.memoryEnabledApps.contains(app.bundleId))
+        }
+        let inactiveEnabledApps = viewModel.memoryEnabledAppsInfo
+            .filter { !runningBundleIds.contains($0.bundleId) }
+            .map { app in
+                MemoryDisplayApp(app: app, isRunning: false, isEnabled: true)
+            }
+        let combined = runningApps + inactiveEnabledApps
+        let filtered = searchText.isEmpty
+            ? combined
+            : combined.filter { $0.app.name.localizedCaseInsensitiveContains(searchText) }
+        return filtered.sorted { lhs, rhs in
+            if lhs.isRunning != rhs.isRunning {
+                return lhs.isRunning && !rhs.isRunning
+            }
+            return lhs.app.name.localizedCaseInsensitiveCompare(rhs.app.name) == .orderedAscending
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            // 运行中应用添加区域
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-                HStack {
-                    Text("正在运行的应用")
-                        .font(.headline)
-                    Spacer()
-                    if !viewModel.runningApps.isEmpty && viewModel.runningApps.count > 3 {
-                        Text("右滑查看更多")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if viewModel.runningApps.isEmpty {
-                    HStack {
-                        Image(systemName: "app.badge")
-                            .font(.title2)
-                            .foregroundStyle(.secondary)
-                        Text("暂无运行中的应用")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(DesignTokens.Spacing.md)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(DesignTokens.CornerRadius.lg)
-                } else {
-                    HStack(spacing: DesignTokens.Spacing.sm) {
-                        ScrollViewReader { proxy in
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                LazyHStack(spacing: DesignTokens.Spacing.md) {
-                                    ForEach(viewModel.runningApps) { app in
-                                        RunningAppCardView(app: app, onAdd: addApp)
-                                            .id(app.bundleId)
-                                    }
-                                }
-                                .padding(.vertical, DesignTokens.Spacing.xs)
-                            }
-                            .onChange(of: scrollTargetId) { targetId in
-                                if let targetId {
-                                    withAnimation(DesignTokens.Animation.normal) {
-                                        proxy.scrollTo(targetId, anchor: .leading)
-                                    }
-                                    scrollTargetId = nil
-                                }
-                            }
-                        }
-
-                        if viewModel.runningApps.count > 3 {
-                            Button(action: scrollForward) {
-                                Image(systemName: "chevron.right")
-                                    .font(.body)
-                                    .foregroundStyle(.tint)
-                                    .frame(width: 32, height: 44)
-                                    .background(Color(NSColor.controlBackgroundColor))
-                                    .cornerRadius(DesignTokens.CornerRadius.lg)
-                            }
-                            .buttonStyle(.plain)
-                            .focusable(false)
-                        }
-                    }
-                }
+            // Search bar
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("搜索运行中应用", text: $searchText)
+                    .textFieldStyle(.plain)
             }
-            .padding()
+            .padding(DesignTokens.Spacing.md)
+            .background(DesignTokens.Colors.background)
+
+            // Info banner
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Image(systemName: "lightbulb")
+                    .foregroundStyle(.yellow)
+                Text("记忆功能会记住应用上次使用的输入法，下次切换到该应用时自动恢复。")
+                    .font(DesignTokens.Typography.badgeText)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(DesignTokens.Spacing.md)
+            .background(Color.accentColor.opacity(0.06))
+            .cornerRadius(DesignTokens.CornerRadius.lg)
+            .padding(.horizontal)
+            .padding(.top, DesignTokens.Spacing.sm)
+
+            // Unified app list
+            ScrollView {
+                LazyVStack(spacing: DesignTokens.Spacing.sm) {
+                    ForEach(unifiedApps) { displayApp in
+                        MemoryAppRowView(
+                            app: displayApp.app,
+                            isRunning: displayApp.isRunning,
+                            isEnabled: displayApp.isEnabled,
+                            isSelected: selectedApps.contains(displayApp.app.bundleId),
+                            onToggleSelection: {
+                                toggleSelection(for: displayApp.app)
+                            },
+                            onAdd: {
+                                addApp(displayApp.app)
+                            },
+                            onRemove: {
+                                viewModel.removeAppsFromMemory([displayApp.app])
+                                selectedApps.remove(displayApp.app.bundleId)
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, DesignTokens.Spacing.sm)
+            }
 
             Divider()
 
-            // 已启用记忆列表
-            MemoryEnabledListView(
-                selectedApps: $selectedApps,
-                onRemove: removeSelectedApps
-            )
-
-            // 底部工具栏
+            // Bottom toolbar
             MemoryToolbarView(
                 selectedCount: selectedApps.count,
                 onClearAll: { showClearConfirmation = true },
@@ -102,6 +112,7 @@ struct MemoryConfigView: View {
         ) {
             Button("确认清空", role: .destructive) {
                 viewModel.clearAllMemory()
+                selectedApps.removeAll()
             }
         } message: {
             Text("此操作不可撤销")
@@ -117,17 +128,13 @@ struct MemoryConfigView: View {
         }
     }
 
-    private func scrollForward() {
-        let apps = viewModel.runningApps
-        if apps.count > 3 {
-            scrollTargetId = apps[3].bundleId
+    private func toggleSelection(for app: AppInfo) {
+        guard viewModel.memoryEnabledApps.contains(app.bundleId) else { return }
+        if selectedApps.contains(app.bundleId) {
+            selectedApps.remove(app.bundleId)
+        } else {
+            selectedApps.insert(app.bundleId)
         }
-    }
-
-    private func removeSelectedApps(_ apps: [AppInfo]) {
-        let toRemove = apps.filter { selectedApps.contains($0.bundleId) }
-        viewModel.removeAppsFromMemory(toRemove)
-        selectedApps.removeAll()
     }
 
     private func deleteSelectedApps() {
