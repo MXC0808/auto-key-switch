@@ -2,7 +2,7 @@
 
 ## Overview
 
-Comprehensive UI optimization for AutoKeySwitch covering all four main areas: app rules page, memory config page, menu bar popover, and HUD. The goal is to improve layout precision, simplify operations, enhance HUD readability, and unify visual consistency.
+Comprehensive UI optimization covering app rules page, memory config page, menu bar popover, and HUD. The goal is to improve layout precision, simplify operations, enhance HUD readability, and unify visual consistency across all views.
 
 ## Design Decisions
 
@@ -18,259 +18,277 @@ Comprehensive UI optimization for AutoKeySwitch covering all four main areas: ap
 
 ### Current Problems
 
-- Column alignment relies on hardcoded widths, causing misalignment across different input method name lengths
-- Selection highlight is not prominent enough
-- Row height is too large, low information density
-- Force English punctuation toggle and Picker positions are unstable
+- `AppSettingsTab` uses a table-like layout with `HStack` containing column headers ("应用", "英文标点", "输入法") and `AppRuleRowV2` rows. Column alignment depends on the `frame(minWidth: 100 + DesignTokens.Sizes.iconLarge + DesignTokens.Spacing.md)` on the app name and `frame(width: DesignTokens.Sizes.pickerWidth)` on the picker. Different input method name lengths cause visual misalignment.
+- Selection highlight uses `DesignTokens.Colors.selectionHighlight` (accentColor at 12% opacity), which is too subtle.
+- Row padding is `DesignTokens.Spacing.sm` (8px) vertical, making rows feel sparse.
+- The force English punctuation toggle (`Toggle` with `.switch` style) and the input method `Picker` (`.menu` style, width `DesignTokens.Sizes.pickerWidth` = 160px) are placed inline in the HStack but their positions shift when the toggle state changes.
 
-### New Design
+### New Design: Card-Based Layout
 
-**Card-based layout**: Each app rule is a self-contained card with:
-- App icon (32x32, 7px corner radius) on the left
-- App name + bundle ID in the middle
-- Force English punctuation toggle (fixed position)
-- Input method picker (fixed on right side)
+Each app rule becomes a self-contained card. The card contains all controls inline — no shared column alignment needed.
 
-**Card structure** (left to right):
-```
-[Icon] [Name + BundleID] ........... [English Punctuation Toggle] [Input Method Picker ▼]
-```
+**Card content (left to right)**:
+1. App icon — `DesignTokens.Sizes.iconLarge` (24px), rendered via `app.icon`
+2. App name — `Text(app.name)`, `.font(.system(size: 13, weight: .medium))`, fixed min width 100px
+3. Spacer
+4. Force English punctuation toggle — `Toggle("", isOn:)` with `.switch` style, disabled state when global toggle is off (same logic as current `AppRuleRowV2`)
+5. Input method picker — `Picker` with `.menu` style, width `DesignTokens.Sizes.pickerWidth` (160px), containing "使用默认" and all `viewModel.inputMethods` entries (same data source as current)
 
-**Interaction**:
-- Click card to select (single select by default)
-- Command+click for multi-select
-- Shift+click for range select
-- Inline Picker directly accessible, no extra click needed
+**Visual styling**:
+- Card background: `Color(NSColor.controlBackgroundColor)` with `RoundedRectangle` corner radius `DesignTokens.CornerRadius.lg` (8px)
+- Card border: 1px `Color(NSColor.separatorColor)`
+- Selected state: border switches to `DesignTokens.Colors.selectionBorder` (accentColor at 30% opacity), left accent bar (3px wide, `Color.accentColor`, corner radius 1.5)
+- Hover state: background switches to `DesignTokens.Colors.hoverBackground` (accentColor at 5%)
+- Card gap: `DesignTokens.Spacing.sm` (8px)
+- Card padding: `DesignTokens.Spacing.md` (12px) vertical, `DesignTokens.Spacing.md` horizontal
 
-**Visual**:
-- Card background: `#222` with `1px #2a2a2a` border
-- Selected state: `rgba(100,149,237,0.3)` border + left accent bar (3px, accent color)
-- Hover state: subtle background change
-- Card corner radius: 10px
-- Card gap: 8px
-- Card padding: 12px 14px
+**Interaction** (same logic as current `AppSettingsTab.toggleSelection`):
+- Normal click: single select (click again to deselect)
+- Command+click: toggle individual selection
+- Shift+click: range select from `lastSelectedIndex`
 
-**Search bar**: Rounded (8px), with magnifying glass icon, placed above the list.
+**Bottom toolbar** (same structure as current):
+- Left: Add button (`plus.circle.fill`), Delete button (`trash`), selected count text
+- Right: Global default input method picker (`viewModel.defaultInputMethod`, same data source)
 
-**Bottom toolbar**:
-- Left: Add button (+), Delete button (trash), selected count
-- Right: Global default input method picker
+### Key Changes from Current
 
-### Key Changes
-
-- Remove column headers (no longer needed with card layout)
-- Each card is self-contained, no cross-card alignment issues
-- Picker width fixed at a reasonable size, truncates long names
+- Remove the column headers HStack ("应用", "英文标点", "输入法") — no longer needed since each card is self-contained
+- Remove `frame(alignment: .center)` and `frame(width:)` alignment constraints that caused misalignment
+- The `AppRuleRowV2` struct is replaced by a new card-style component reusing the same `onToggleSelection` / `onInputChange` callback pattern
+- Search bar, bottom toolbar, add/delete logic, and confirmation dialog remain unchanged
 
 ## 2. Memory Config Page
 
 ### Current Problems
 
-- Running apps use horizontal scroll cards, requires left-right scrolling
-- Adding apps requires finding the card and clicking + button
-- Enabled list and running apps are separated, creating a fragmented mental model
-- No search functionality
+- `MemoryConfigView` shows running apps in a horizontal `ScrollView` with `LazyHStack` containing `RunningAppCardView` items. When more than 3 apps are running, a custom scroll-forward button appears. This requires horizontal scrolling to find apps.
+- Adding an app to memory requires clicking the `+` button on a `RunningAppCardView`, which calls `viewModel.addAppToMemory(app)`. The button shows a checkmark when already added (`isAlreadyAdded`).
+- The enabled list (`MemoryEnabledListView`) is a separate section below a `Divider`, creating a two-zone layout that splits the user's attention.
+- No search/filter capability for either section.
 
-### New Design
+### New Design: Unified List
 
-**Unified list**: All apps (running, enabled, not-running) in a single scrollable list.
+Replace the two-zone layout with a single scrollable list. All memory-relevant apps appear in one list, differentiated by status badges.
 
-**App row structure**:
-```
-[Icon] [Name] [Last Input Method] [Status Badge] [Add Button]
-```
+**App row content (left to right)**:
+1. App icon — `DesignTokens.Sizes.iconLarge` (24px)
+2. App name — `Text(app.name)`, `.font(.system(size: 12, weight: .medium))`
+3. Last input method — `Text("上次: \(name)")` using `viewModel.lastInputMethodStates[app.bundleId]` (same data source as current `MemoryAppRowView.lastMethodName`), or "暂无记录" if nil
+4. Spacer
+5. Status badge — see below
+6. Add button (only for running apps not yet enabled) — circular button with `+` icon
 
-**Status badges**:
-- `● 运行中` — green dot + text, green-tinted background
-- `已启用` — blue text, blue-tinted background
-- `未运行` — gray text, gray background
+**Status badges** (implemented as styled `Text` with background):
+- Running: green dot prefix + "运行中" text, `Color.green` foreground, `Color.green.opacity(0.12)` background, 4px corner radius
+- Enabled: "已启用" text, `Color.accentColor` foreground, `Color.accentColor.opacity(0.12)` background
+- Not running (enabled but app closed): gray "未运行" text, `Color.secondary` foreground, `Color.secondary.opacity(0.08)` background
 
-**Add interaction**: Each non-enabled running app shows a circular `+` button on the right. Click to add immediately (inline, no sheet/dialog).
+**App ordering**: Running apps first (sorted by name), then not-running enabled apps (sorted by name, dimmed to 0.7 opacity).
 
-**Info banner**: Light blue banner below search bar explaining the memory feature.
+**Add interaction**: Click the `+` button calls `viewModel.addAppToMemory(app)`. If it returns false (max limit reached, `Constants.maxMemoryEnabledApps` = 20), show the existing `showLimitAlert`. The `+` button transitions to a checkmark when added (same pattern as current `RunningAppCardView.isAdded` state).
 
-**Search bar**: Same style as app rules page, filters by app name.
+**Info banner**: Below the search bar, a rounded rectangle with `Color.accentColor.opacity(0.06)` background, containing a lightbulb icon and explanation text: "记忆功能会记住应用上次使用的输入法，下次切换到该应用时自动恢复。"
+
+**Search bar**: Same style as app rules page search bar, filters by `app.name.localizedCaseInsensitiveContains(searchText)`.
 
 **Bottom toolbar**:
-- Left: "清空全部" button (destructive)
-- Right: Total enabled count
+- Left: "清空全部" button (same `showClearConfirmation` dialog as current `MemoryToolbarView`)
+- Right: "共 N 个" count text using `viewModel.memoryEnabledAppsInfo.count`
+- Selected count and delete-selected button (same logic as current `MemoryToolbarView`)
 
-**Enabled app row** (when app is also running):
-```
-[Icon] [Name] [上次: 简体拼音] [● 运行中] [已启用]
-```
+### Files Affected
 
-**Not-running enabled app** (dimmed, 70% opacity):
-```
-[Icon] [Name] [上次: ABC] [未运行] [已启用]
-```
+- `MemoryConfigView.swift`: Remove the horizontal `ScrollView`/`LazyHStack`/`RunningAppCardView` section. Replace with unified list.
+- `MemoryEnabledListView.swift`: Merge its content into the unified list in `MemoryConfigView`. This file can be removed.
+- `MemoryAppRowView.swift`: Adapt to include status badges and add button, or replace with new unified row component.
+- `RunningAppCardView.swift`: Remove — no longer needed.
+- `MemoryToolbarView.swift`: Keep as-is, or inline into `MemoryConfigView` bottom bar.
 
 ## 3. Menu Bar Popover
 
 ### Current Problems
 
-- Running apps nested in secondary menus, deep hierarchy
-- No global toggle to pause/resume
-- Current active app not highlighted
-- No quick way to switch global input method
+- `MenuBarView` shows `RunningAppsView` which renders a `Section` with `AppRowView` items. Each `AppRowView` is a `Menu` that opens a submenu to select input methods — two levels of nesting to change an input method.
+- No global toggle to pause/resume auto-switching.
+- The current active app is not visually distinguished from other running apps.
+- No quick way to switch the global default input method from the menu bar.
 
 ### New Design (B+C Hybrid)
 
-**Layout** (top to bottom):
-1. **Global toggle header**: App icon + "AutoKeySwitch" + ON/OFF switch
-2. **Current active app**: Highlighted with blue-tinted background, shows current input method
-3. **Other running apps**: Grouped under "其他运行中" label
-4. **Quick switch**: Two buttons for switching global input method (e.g., "简体拼音" / "ABC")
-5. **Actions toolbar**: "设置" button + "退出" button
+Replace the current `MenuBarView` content with a custom popover-style layout rendered as SwiftUI views (not NSMenu items).
 
-**Global toggle**:
-- When OFF: auto-switching of input methods is paused (no automatic switching on app focus change). Manual switching via menu bar still works.
-- State persisted in Defaults as a new key `isAutoSwitchEnabled` (default: true)
-- UI dims the running apps section when OFF, but settings remain accessible
+**Layout (top to bottom)**:
 
-**Current active app section**:
-- Blue-tinted background (`rgba(100,149,237,0.06)`)
-- Shows app icon, name, current input method
-- Keyboard shortcut hint (⌘1)
+1. **Global toggle header**: App icon (16px) + "AutoKeySwitch" title + ON/OFF toggle switch. Uses a new `Defaults` key `isAutoSwitchEnabled` (Bool, default true, stored in appGroup suite). When OFF, the running apps section below dims to 0.4 opacity and auto-switching is paused in `InputMethodManager.handleAppActivation` (early return when disabled).
 
-**Quick switch section**:
-- Pill-shaped buttons for each available input method
-- Active method highlighted with blue tint
-- Click to switch the **global default input method** (not the current app's method). This is equivalent to changing the "全局默认" picker in the app rules page.
+2. **Current active app section**: Only shown when `viewModel.currentActiveAppBundleId` is non-nil. Blue-tinted background (`Color.accentColor.opacity(0.06)`). Shows the active app's icon, name, and current input method name (resolved via `viewModel.getSelectedInputMethodName(for:)`). Displays keyboard shortcut hint `⌘1`.
 
-**Popover width**: 260px (fixed)
+3. **Other running apps section**: Label "其他运行中" in `.font(.caption)` with `.secondary` foreground. Lists remaining running apps (filtered to exclude the current active app) using the same `AppRowView` pattern but with a single-level menu (no submenu nesting — input method options shown directly in the menu).
+
+4. **Quick switch section**: Label "快速切换" in `.font(.caption)`. Pill-shaped buttons for each `viewModel.inputMethods` entry. Active global default (`viewModel.defaultInputMethod`) gets accent-colored background. Click calls `viewModel.setDefaultInputMethod(method.id)`.
+
+5. **Actions toolbar**: "设置" button (opens main window via existing `NotificationCenter` post for "ShowMainWindow"), "退出" button (calls `NSApplication.shared.terminate`). Styled as bordered buttons in a horizontal HStack.
+
+**Popover width**: 260px (fixed frame).
+
+### New Defaults Key
+
+Add to `Defaults+Extensions.swift`:
+```
+Key: isAutoSwitchEnabled
+Type: Bool
+Default: true
+Suite: appGroup
+```
+
+### Integration Point
+
+In `InputMethodManager.handleAppActivation`, add an early return when `Defaults[.isAutoSwitchEnabled]` is false. This pauses all automatic input method switching without affecting manual switching or settings access.
 
 ## 4. HUD (Input Method Switch Indicator)
 
 ### Current Problems
 
-- Plain text only, no visual icon
-- Low recognition at a glance
-- No color coding for input method type
+- `InputMethodHUDView` renders only a `Text(inputMethodName)` with `.title2` font weight `.medium`. No icon, no color coding.
+- `InputMethodHUDPanel` creates an `NSVisualEffectView` with `.hudWindow` material, positions the panel at screen center, and auto-hides after 1.5s with a 0.3s fade. The content is plain text on a blur background.
 
 ### New Design — Pill Badge
 
-**Shape**: Rounded pill (20px border-radius)
+Replace the `Text`-only content with a pill-shaped badge containing a color-coded indicator dot and the input method name.
 
-**Structure**:
-```
-[●  Indicator Dot] [Input Method Name]
-```
+**HUD content**:
+- Horizontal `HStack` with 8px spacing
+- Indicator dot: 8px circle (`Circle()` frame), colored based on input method type:
+  - English input (name contains "ABC" or "English"): `Color(red: 0.42, green: 0.66, blue: 0.86)` (#6fa8dc equivalent), with `shadow(color: .blue.opacity(0.4), radius: 3)`
+  - Chinese input (all others): `Color.orange`, with `shadow(color: .orange.opacity(0.4), radius: 3)`
+- Input method name: `Text(inputMethodName)`, `.font(.system(size: 15, weight: .medium))`, `.foregroundColor(.white.opacity(0.9))`
 
-**Visual**:
-- Background: `rgba(40,40,40,0.9)` with `backdrop-filter: blur(20px)`
-- Border: `1px rgba(255,255,255,0.08)`
-- Shadow: `0 4px 24px rgba(0,0,0,0.4)`
-- Padding: `8px 20px`
+**Container styling**:
+- `RoundedRectangle(cornerRadius: 20)` filled with `Color.black.opacity(0.7)`
+- Background: `NSVisualEffectView` with `.hudWindow` material (same as current `InputMethodHUDPanel`) — provides the blur effect
+- Padding: 8px vertical, 20px horizontal
+- The `NSHostingView` wraps the SwiftUI pill badge content
 
-**Indicator dot**:
-- English input (ABC): `#6fa8dc` (blue), with `box-shadow: 0 0 6px rgba(111,168,220,0.4)`
-- Chinese input: `#ff9500` (orange), with `box-shadow: 0 0 6px rgba(255,149,0,0.4)`
+**No changes to**: Panel positioning (screen center, slightly above middle), display duration (1.5s), fade animation (0.3s), window level (`.floating`), collection behavior (`.canJoinAllSpaces`).
 
-**Text**: 15px, weight 500, `#e0e0e0`, letter-spacing 0.3px
+### Files Affected
 
-**App context variant**: App icon + divider + indicator dot + name. Only shown when the HUD is triggered by an app-specific rule (not global default switch). This is an optional enhancement — implement only if it adds no significant complexity.
-
-**Position**: Center of screen, slightly above middle (same as current)
-
-**Duration**: 1.5s display, 0.3s fade-out animation (same as current)
+- `InputMethodHUDView.swift`: Replace `Text(inputMethodName)` body with the pill badge `HStack` layout
+- `InputMethodHUDPanel.swift`: No structural changes needed — it already wraps the SwiftUI view in an `NSVisualEffectView`. May need to adjust `contentHuggingPriority` if the new content size differs.
 
 ## 5. Preferences Page
 
 ### Current Problems
 
-- Flat GroupBox layout, visual hierarchy unclear
-- Inconsistent spacing between sections
-- Toggle descriptions mixed with labels
+- `PreferencesTab` uses `GroupBox` wrappers for each section ("启动", "显示", "提示", "强制英文符号"). `GroupBox` provides a system-standard look but the visual hierarchy between sections is weak — they all look the same weight.
+- Spacing between `GroupBox` sections is inconsistent (the `VStack` spacing is 20px but the `GroupBox` internal padding varies).
+- Toggle descriptions are in `.help()` tooltips (hidden by default) rather than visible subtitle text.
 
-### New Design
+### New Design: Section Cards
 
-**Section cards**: Each preference group is a rounded card (10px corner radius) with:
-- Section header: darker background (`#252525`), shows section name
-- Content area: toggle rows with label + description + switch
+Replace `GroupBox` with custom rounded-rect section containers.
 
-**Section groups**:
-1. **通用**: 启动时登录, 切换时显示 HUD
-2. **显示**: 隐藏菜单栏图标, 隐藏 Dock 图标
-3. **高级**: 强制英文符号
+**Section container**:
+- `RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)` (8px) filled with `Color(NSColor.controlBackgroundColor)`
+- Border: 1px `Color(NSColor.separatorColor)`
+- Section header: a separate HStack with `.background(Color(NSColor.controlBackgroundColor).opacity(0.5))` and the section title in `.font(.system(size: 12, weight: .medium))` with `.secondary` foreground
 
-**Toggle row structure**:
-```
-[Label + Description] ......................... [Toggle Switch]
-```
+**Section groups** (same content as current, reorganized):
+1. **通用**: "登录时启动" toggle + "切换输入法时显示弹窗提示" toggle (moved from the separate "提示" GroupBox)
+2. **显示**: "隐藏菜单栏图标" toggle + "隐藏 Dock 图标" toggle
+3. **高级**: "强制英文符号" toggle + help popover + accessibility permission warning (same logic as current)
 
-- Label: 12px, `#ccc`
-- Description: 10px, `#555`
-- Toggle: standard iOS-style switch
+**Toggle row**: `VStack(alignment: .leading)` containing the label in `.font(.system(size: 12))` and description in `.font(.system(size: 10))` with `.foregroundStyle(.tertiary)`. Toggle switch aligned to the trailing edge via `Spacer()`.
 
-**Import/Export**: Right-aligned buttons at the bottom, outside the cards.
+**Import/Export buttons**: Right-aligned `HStack` at the bottom, outside the section cards. Same button labels and actions as current.
+
+**All existing logic preserved**: `isLaunchAtLoginEnabled`, `isMenuBarHidden`, `isDockHidden`, `showHUDOnSwitch`, `forceEnglishPunctuationEnabled`, accessibility permission checks, import/export via `ConfigurationExportService`, all alert/confirmation dialogs.
 
 ## 6. Visual Consistency Rules
 
-### Spacing
+All values reference existing `DesignTokens` where possible. New tokens are noted.
 
-- Card gap: 8px
-- Card padding: 12px 14px
-- Section gap: 16px
-- Content padding: 16px
+### Spacing (existing DesignTokens.Spacing)
 
-### Corner Radius
+| Token | Value | Usage |
+|-------|-------|-------|
+| `xs` | 4px | Tight gaps |
+| `sm` | 8px | Card gap, badge padding |
+| `md` | 12px | Card padding, content margins |
+| `lg` | 16px | Section gap, header padding |
+| `xl` | 20px | HUD horizontal padding |
 
-- Cards: 10px
-- Buttons: 6px
-- Input fields: 8px
-- Pills/badges: 20px
+### Corner Radius (existing DesignTokens.CornerRadius)
 
-### Colors
+| Token | Value | Usage |
+|-------|-------|-------|
+| `sm` | 4px | Badge corners |
+| `md` | 6px | Button corners |
+| `lg` | 8px | Card corners, input field corners |
+| `xl` | 12px | (existing, unused in new design) |
 
-- Card background: `#222`
-- Card border: `#2a2a2a`
-- Selected border: `rgba(100,149,237,0.3)`
-- Active accent: `#6fa8dc`
-- Success/running: `#34c759`
-- Warning: `#ff9500`
-- Destructive: `#ff6b6b`
-- Text primary: `#ddd` / `#ccc`
-- Text secondary: `#888` / `#666`
-- Text tertiary: `#555`
+**New token needed**: `pill: CGFloat = 20` for HUD pill badge and menu bar quick-switch pills.
 
-### Typography
+### Colors (existing DesignTokens.Colors + new)
 
-- Card title: 12-13px, weight 500
-- Card subtitle: 10px
-- Badge text: 9-10px
-- Section header: 12px, weight 500
+| Token | Value | Usage |
+|-------|-------|-------|
+| `selectionHighlight` | accentColor 12% | Card selected background |
+| `selectionBorder` | accentColor 30% | Card selected border |
+| `hoverBackground` | accentColor 5% | Card hover background |
+| `background` | NSColor.controlBackgroundColor | Card background, section background |
+| `divider` | NSColor.separatorColor | Card borders |
+
+**New colors needed**:
+- `hudEnglishIndicator`: `Color(red: 0.42, green: 0.66, blue: 0.86)` — HUD dot for English input
+- `hudChineseIndicator`: `Color.orange` — HUD dot for Chinese input
+- `statusRunning`: `Color.green` — Memory page running badge
+- `destructive`: `Color(red: 1.0, green: 0.42, blue: 0.42)` — Menu bar exit button
+
+### Typography (existing DesignTokens.Typography + new)
+
+**New tokens needed**:
+- `cardTitle`: `.system(size: 13, weight: .medium)` — App name in cards
+- `cardSubtitle`: `.system(size: 10)` — Bundle ID, last input method
+- `badgeText`: `.system(size: 10)` — Status badge text
+- `sectionHeader`: `.system(size: 12, weight: .medium)` — Preference section title
+- `menuItemTitle`: `.system(size: 13, weight: .medium)` — Menu bar app name
+- `menuItemSubtitle`: `.system(size: 10)` — Menu bar input method name
+- `hudText`: `.system(size: 15, weight: .medium)` — HUD input method name
 
 ## 7. Files to Modify
 
 | File | Changes |
 |------|---------|
-| `AppSettingsTab.swift` | Replace table layout with card layout |
-| `AppRowView.swift` / `AppRuleRowV2` | Redesign as card component |
-| `MemoryConfigView.swift` | Replace horizontal cards with unified list |
-| `MemoryEnabledListView.swift` | Merge into unified list |
-| `MemoryAppRowView.swift` | Add status badges, inline add |
-| `MemoryToolbarView.swift` | Simplify bottom toolbar |
-| `RunningAppCardView.swift` | Remove (no longer needed) |
-| `MenuBarView.swift` | Add global toggle, restructure layout |
-| `InputMethodHUDView.swift` | Replace with pill badge design |
-| `InputMethodHUDPanel.swift` | Update styling for pill badge |
-| `PreferencesTab.swift` | Replace GroupBox with section cards |
-| `ContentHeaderView.swift` | Minor alignment adjustments |
-| `SidebarView.swift` | No changes needed |
-| `DesignSystem.swift` | Add new color/spacing tokens if needed |
+| `AppSettingsTab.swift` | Remove column headers. Replace row layout with card layout. Keep search bar, bottom toolbar, add/delete logic, confirmation dialog unchanged. |
+| `AppRuleRowV2` (in `AppSettingsTab.swift`) | Redesign body: replace HStack column-aligned layout with card-style HStack containing icon, name, spacer, toggle, picker. Keep `onToggleSelection`, `onInputChange`, `isSelected`, `isHovered` state and callbacks. |
+| `MemoryConfigView.swift` | Remove the `VStack` containing the "正在运行的应用" horizontal `ScrollView` section. Replace entire body with search bar + info banner + unified `LazyVStack` list + bottom toolbar. |
+| `MemoryEnabledListView.swift` | Remove file — its content is merged into the unified list in `MemoryConfigView`. |
+| `MemoryAppRowView.swift` | Adapt or replace: add status badge display, add inline `+` button for non-enabled running apps. Keep `onToggleSelection` and `onRemove` callbacks. |
+| `MemoryToolbarView.swift` | Keep file, minor adjustments if bottom toolbar is inlined into `MemoryConfigView`. |
+| `RunningAppCardView.swift` | Remove file — horizontal card layout is no longer used. |
+| `MenuBarView.swift` | Replace `Group` body with new layout: global toggle header, current active app section, other running apps section, quick switch section, actions toolbar. |
+| `InputMethodHUDView.swift` | Replace `Text(inputMethodName)` body with pill badge `HStack` (indicator dot + name). |
+| `InputMethodHUDPanel.swift` | No structural changes. Verify `fittingSize` calculation still works with new content dimensions. |
+| `PreferencesTab.swift` | Replace `GroupBox` wrappers with custom section card containers. Reorganize sections (merge "提示" into "通用"). Move toggle descriptions from `.help()` to visible subtitle text. |
+| `DesignSystem.swift` | Add new tokens: `CornerRadius.pill`, `Colors.hudEnglishIndicator`, `Colors.hudChineseIndicator`, `Colors.statusRunning`, `Colors.destructive`, and new Typography entries listed in section 6. |
+| `Defaults+Extensions.swift` | Add `isAutoSwitchEnabled` key (Bool, default true, appGroup suite). |
+| `InputMethodManager.swift` | Add early return in `handleAppActivation` when `Defaults[.isAutoSwitchEnabled]` is false. |
 
 ## 8. Non-Goals
 
-- No changes to the sidebar navigation structure
-- No changes to the add app sheet (AddAppSheet.swift)
-- No changes to the data model or service layer
-- No new features beyond UI presentation improvements
-- No changes to keyboard shortcuts
+- No changes to sidebar navigation structure (`SidebarView.swift`, `NavigationVM`)
+- No changes to `AddAppSheet.swift` (the add-app modal)
+- No changes to data model (`AppInfo`, `InputMethod`) or service layer (`AppListService`, `InputMethodService`, `PermissionService`)
+- No new features beyond UI presentation improvements (except the global toggle which is a presentation-layer control for existing behavior)
+- No changes to keyboard shortcuts (existing `.keyboardShortcut` modifiers preserved)
+- No changes to `MainView.swift` frame size or layout structure
 
 ## 9. Risks
 
-- **Migration**: Existing user configurations must continue to work without changes
-- **Accessibility**: All new interactive elements must have proper accessibility labels
-- **Performance**: Card layout with many apps (50+) should remain smooth with LazyVStack
-- **Dark/Light mode**: All colors must be tested in both appearances (currently dark-only is acceptable given the app's nature)
+- **Migration**: Existing user configurations in `Defaults[.appInputMethodSettings]`, `Defaults[.memoryEnabledApps]`, etc. are not affected — no schema changes.
+- **Accessibility**: All new interactive elements (`Toggle`, `Picker`, `Button`) use standard SwiftUI controls which provide built-in accessibility. The pill badge indicator dot should have an `accessibilityLabel` describing the input method type.
+- **Performance**: Card layout with many apps (50+) uses `LazyVStack` (same as current `AppSettingsTab`) for efficient rendering.
+- **Dark/Light mode**: The design uses semantic colors (`NSColor.controlBackgroundColor`, `NSColor.separatorColor`) which adapt automatically. Custom colors (HUD indicators, status badges) are defined as fixed values — acceptable given the app's primary dark-mode usage.
+- **MenuBarView rendering**: The new layout uses standard SwiftUI views inside the menu bar popover. If the popover doesn't render correctly as SwiftUI (vs NSMenu items), fallback to the existing `Section`/`Menu` pattern with the global toggle added as a `Toggle` at the top.
