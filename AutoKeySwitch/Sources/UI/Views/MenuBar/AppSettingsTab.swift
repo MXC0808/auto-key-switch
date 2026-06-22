@@ -31,26 +31,11 @@ struct AppSettingsTab: View {
 			.background(DesignTokens.Colors.background)
 
 
-			// Column headers
-			HStack(spacing: DesignTokens.Spacing.md) {
-				Text("应用")
-					.frame(minWidth: 100 + DesignTokens.Sizes.iconLarge + DesignTokens.Spacing.md, alignment: .leading)
-				Spacer()
-				Text("英文标点")
-					.frame(alignment: .center)
-				Text("输入法")
-					.frame(width: DesignTokens.Sizes.pickerWidth, alignment: .leading)
-			}
-			.font(.caption)
-			.foregroundStyle(.secondary)
-			.padding(.horizontal, DesignTokens.Spacing.md + DesignTokens.Spacing.lg)
-			.padding(.vertical, DesignTokens.Spacing.xs)
-
 			// Apps list
 			ScrollView {
-				LazyVStack(spacing: DesignTokens.Spacing.xs) {
+				LazyVStack(spacing: DesignTokens.Spacing.sm) {
 					ForEach(Array(filteredApps.enumerated()), id: \.element.bundleId) { index, app in
-						AppRuleRowV2(
+						AppRuleCardView(
 							app: app,
 							isSelected: selectedApps.contains(app.bundleId),
 							onToggleSelection: { toggleSelection(for: app, at: index) },
@@ -199,9 +184,9 @@ struct AppSettingsTab: View {
 	}
 }
 
-// MARK: - App Rule Row V2
+// MARK: - App Rule Card View
 
-struct AppRuleRowV2: View {
+struct AppRuleCardView: View {
 	@EnvironmentObject private var viewModel: InputMethodManager
 	let app: AppInfo
 	let isSelected: Bool
@@ -217,43 +202,48 @@ struct AppRuleRowV2: View {
 
 	var body: some View {
 		HStack(spacing: DesignTokens.Spacing.md) {
-			// Application icon
 			app.icon
 				.frame(width: DesignTokens.Sizes.iconLarge, height: DesignTokens.Sizes.iconLarge)
 
-			// Application name
-			Text(app.name)
-				.frame(minWidth: 100, alignment: .leading)
+			VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
+				Text(app.name)
+					.font(DesignTokens.Typography.cardTitle)
+					.lineLimit(1)
+			}
+			.frame(minWidth: 100, alignment: .leading)
 
 			Spacer()
 
-			// 强制英文符号开关
 			let isGlobalEnabled = Defaults[.forceEnglishPunctuationEnabled]
 
-			Toggle("", isOn: $forceEnglishPunctuation)
-			.help(isGlobalEnabled ? "强制英文符号" : "请先在通用设置中开启总开关")
-			.toggleStyle(.switch)
-			.disabled(!isGlobalEnabled)
-			.opacity(isGlobalEnabled ? 1.0 : 0.4)
-					.focusable(false)
-				.onChange(of: forceEnglishPunctuation) { newValue in
-					var apps = Defaults[.forceEnglishPunctuationApps]
-					if newValue {
-						apps.insert(app.bundleId)
-					} else {
-						apps.remove(app.bundleId)
-					}
-					Defaults[.forceEnglishPunctuationApps] = apps
-					// 如果是当前活跃应用，立即更新服务状态
-					if app.bundleId == viewModel.currentActiveAppBundleId {
-						viewModel.updatePunctuationServiceState()
-					}
-				}
-				.onAppear {
-					forceEnglishPunctuation = Defaults[.forceEnglishPunctuationApps].contains(app.bundleId)
-				}
+			HStack(spacing: DesignTokens.Spacing.xs) {
+				Text("英文标点")
+					.font(DesignTokens.Typography.badgeText)
+					.foregroundStyle(.secondary)
 
-			// Input method selector
+				Toggle("", isOn: $forceEnglishPunctuation)
+					.help(isGlobalEnabled ? "强制英文符号" : "请先在通用设置中开启总开关")
+					.toggleStyle(.switch)
+					.disabled(!isGlobalEnabled)
+					.opacity(isGlobalEnabled ? 1.0 : 0.4)
+					.focusable(false)
+					.onChange(of: forceEnglishPunctuation) { newValue in
+						var apps = Defaults[.forceEnglishPunctuationApps]
+						if newValue {
+							apps.insert(app.bundleId)
+						} else {
+							apps.remove(app.bundleId)
+						}
+						Defaults[.forceEnglishPunctuationApps] = apps
+						if app.bundleId == viewModel.currentActiveAppBundleId {
+							viewModel.updatePunctuationServiceState()
+						}
+					}
+					.onAppear {
+						forceEnglishPunctuation = Defaults[.forceEnglishPunctuationApps].contains(app.bundleId)
+					}
+			}
+
 			Picker("", selection: Binding(
 				get: { currentSelection },
 				set: { newValue in
@@ -281,13 +271,17 @@ struct AppRuleRowV2: View {
 			}
 			.pickerStyle(.menu)
 			.frame(width: DesignTokens.Sizes.pickerWidth)
-			  .focusable(false)
-			}
-	.padding(.vertical, DesignTokens.Spacing.sm)
+			.focusable(false)
+		}
+		.padding(.vertical, DesignTokens.Spacing.md)
 		.padding(.horizontal, DesignTokens.Spacing.md)
 		.background {
-			RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md)
-				.fill(isSelected ? DesignTokens.Colors.selectionHighlight : (isHovered ? DesignTokens.Colors.hoverBackground : .clear))
+			RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+				.fill(isSelected ? DesignTokens.Colors.selectionHighlight : (isHovered ? DesignTokens.Colors.hoverBackground : DesignTokens.Colors.background))
+		}
+		.overlay {
+			RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
+				.stroke(isSelected ? DesignTokens.Colors.selectionBorder : DesignTokens.Colors.divider, lineWidth: 1)
 		}
 		.overlay(alignment: .leading) {
 			RoundedRectangle(cornerRadius: 1.5)
