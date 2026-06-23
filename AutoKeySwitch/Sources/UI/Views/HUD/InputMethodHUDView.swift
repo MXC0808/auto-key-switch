@@ -4,30 +4,15 @@ struct InputMethodHUDView: View {
     let inputMethodName: String
 
     var body: some View {
-        HStack(spacing: DesignTokens.Spacing.sm) {
-            Circle()
-                .fill(indicatorColor)
-                .frame(width: DesignTokens.Spacing.sm, height: DesignTokens.Spacing.sm)
-                .shadow(color: indicatorColor.opacity(0.4), radius: 3)
-                .accessibilityHidden(true)
-
-            Text(inputMethodName)
-                .font(DesignTokens.Typography.hudText)
-                .foregroundColor(.white.opacity(0.9))
-        }
-        .padding(.horizontal, DesignTokens.Spacing.xl)
-        .padding(.vertical, DesignTokens.Spacing.sm)
-        .background(Color.black.opacity(0.7))
-        .clipShape(Capsule())
-        .accessibilityLabel("当前输入法：\(inputMethodName)")
-    }
-
-    private var indicatorColor: Color {
-        let lowercasedName = inputMethodName.lowercased()
-        if lowercasedName.contains("abc") || lowercasedName.contains("english") {
-            return DesignTokens.Colors.hudEnglishIndicator
-        }
-        return DesignTokens.Colors.hudChineseIndicator
+        Text(inputMethodName)
+            .font(.system(size: 20, weight: .bold))
+            .foregroundColor(.white)
+            .lineLimit(1)
+            .padding(.horizontal, 26)
+            .padding(.vertical, 14)
+            .background(Color.black.opacity(0.72))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityLabel("当前输入法：\(inputMethodName)")
     }
 }
 
@@ -58,7 +43,7 @@ final class InputMethodHUDPanel: NSPanel {
         visualEffectView.material = .hudWindow
         visualEffectView.blendingMode = .behindWindow
         visualEffectView.wantsLayer = true
-        visualEffectView.layer?.cornerRadius = DesignTokens.CornerRadius.pill
+        visualEffectView.layer?.cornerRadius = 16
         visualEffectView.layer?.masksToBounds = true
 
         let hostingView = NSHostingView(rootView: InputMethodHUDView(inputMethodName: inputMethodName))
