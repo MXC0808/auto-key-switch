@@ -1,39 +1,25 @@
 import SwiftUI
 
-/// Main window view with sidebar navigation
+/// Main window with sidebar navigation.
 struct MainView: View {
 	@EnvironmentObject private var viewModel: InputMethodManager
 	@StateObject private var navigationVM = NavigationVM()
-	@State private var asyncSelection: NavigationVM.NavItem = .appRules
 
 	var body: some View {
 		HStack(spacing: 0) {
 			SidebarView()
 
-			VStack(spacing: 0) {
-				ContentHeaderView(item: asyncSelection)
-				asyncSelection.getView()
-				Spacer(minLength: 0)
-			}
-			.border(width: 1, edges: [.leading], color: Color(NSColor.separatorColor))
+			detailContent
+				.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+				.background(DesignTokens.Colors.windowBackground)
 		}
-		.frame(minWidth: 780, minHeight: 520)
+		.frame(minWidth: 860, minHeight: 560)
 		.environmentObject(navigationVM)
-		.onChange(of: navigationVM.selection) { _ in
-			withAnimation(DesignTokens.Animation.fast) {
-				asyncSelection = navigationVM.selection
-			}
-		}
-		.onAppear {
-			asyncSelection = navigationVM.selection
-		}
 	}
-}
 
-extension NavigationVM.NavItem {
 	@ViewBuilder
-	func getView() -> some View {
-		switch self {
+	private var detailContent: some View {
+		switch navigationVM.selection {
 		case .appRules:
 			AppSettingsTab()
 		case .memory:

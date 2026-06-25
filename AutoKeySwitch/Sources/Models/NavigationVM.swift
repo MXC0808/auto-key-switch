@@ -35,6 +35,28 @@ class NavigationVM: ObservableObject {
 			}
 		}
 
+		var summary: String {
+			switch self {
+			case .appRules:
+				return "按应用精确控制输入法与标点"
+			case .memory:
+				return "记住最近一次输入法选择"
+			case .preferences:
+				return "启动、显示与高级行为"
+			}
+		}
+
+		var searchPrompt: String {
+			switch self {
+			case .appRules:
+				return "搜索应用规则"
+			case .memory:
+				return "搜索记忆应用"
+			case .preferences:
+				return "搜索设置项"
+			}
+		}
+
 		/// Keyboard shortcut for navigation
 		var shortcut: KeyEquivalent {
 			switch self {

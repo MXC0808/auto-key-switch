@@ -69,6 +69,7 @@ enum AppVisibilityService {
 // MARK: - Notification Names
 
 extension Notification.Name {
+	static let showMainWindow = Notification.Name("ShowMainWindow")
 static let menuBarVisibilityChanged = Notification.Name("menuBarVisibilityChanged")
 	static let inputMethodDidSwitch = Notification.Name("inputMethodDidSwitch")
 }

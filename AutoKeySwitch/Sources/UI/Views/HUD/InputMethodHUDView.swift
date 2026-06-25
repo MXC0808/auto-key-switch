@@ -4,15 +4,31 @@ struct InputMethodHUDView: View {
     let inputMethodName: String
 
     var body: some View {
-        Text(inputMethodName)
-            .font(.system(size: 20, weight: .bold))
-            .foregroundColor(.white)
-            .lineLimit(1)
-            .padding(.horizontal, 26)
-            .padding(.vertical, 14)
-            .background(Color.black.opacity(0.72))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .accessibilityLabel("当前输入法：\(inputMethodName)")
+        HStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.12))
+                    .frame(width: 28, height: 28)
+                Image(systemName: "keyboard")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("输入法已切换")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(inputMethodName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(Color.clear)
+        .accessibilityLabel("当前输入法：\(inputMethodName)")
     }
 }
 
@@ -21,7 +37,7 @@ final class InputMethodHUDPanel: NSPanel {
 
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 200, height: 60),
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 78),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -29,7 +45,7 @@ final class InputMethodHUDPanel: NSPanel {
         level = .floating
         isOpaque = false
         backgroundColor = .clear
-        hasShadow = true
+        hasShadow = false
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     }
 
@@ -40,11 +56,13 @@ final class InputMethodHUDPanel: NSPanel {
         // correctly in a .nonactivatingPanel (inactive windows skip visual effects)
         let visualEffectView = NSVisualEffectView()
         visualEffectView.state = .active
-        visualEffectView.material = .hudWindow
+        visualEffectView.material = .popover
         visualEffectView.blendingMode = .behindWindow
         visualEffectView.wantsLayer = true
-        visualEffectView.layer?.cornerRadius = 16
+        visualEffectView.layer?.cornerRadius = 14
         visualEffectView.layer?.masksToBounds = true
+        visualEffectView.layer?.borderWidth = 1
+        visualEffectView.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.12).cgColor
 
         let hostingView = NSHostingView(rootView: InputMethodHUDView(inputMethodName: inputMethodName))
         hostingView.translatesAutoresizingMaskIntoConstraints = false
@@ -61,7 +79,8 @@ final class InputMethodHUDPanel: NSPanel {
         ])
 
         hostingView.layout()
-        let size = hostingView.fittingSize
+        let fittingSize = hostingView.fittingSize
+        let size = NSSize(width: max(260, min(fittingSize.width, 420)), height: 68)
         visualEffectView.frame = NSRect(origin: .zero, size: size)
 
         contentView = visualEffectView
@@ -69,7 +88,7 @@ final class InputMethodHUDPanel: NSPanel {
         let screen = NSScreen.main
         let screenFrame = screen?.visibleFrame ?? NSRect.zero
         let x = screenFrame.midX - size.width / 2
-        let y = screenFrame.midY + 100
+        let y = screenFrame.midY + 84
         setFrameOrigin(NSPoint(x: x, y: y))
 
         orderFrontRegardless()
@@ -80,7 +99,9 @@ final class InputMethodHUDPanel: NSPanel {
                 context.duration = 0.3
                 self?.animator().alphaValue = 0
             } completionHandler: {
-                self?.orderOut(nil)
+                Task { @MainActor [weak self] in
+                    self?.orderOut(nil)
+                }
             }
         }
         hideWorkItem = workItem

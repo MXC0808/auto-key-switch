@@ -19,129 +19,155 @@ struct PreferencesTab: View {
     @State private var showImportError = false
     @State private var showHUDOnSwitch = Defaults[.showHUDOnSwitch]
 
+    private var searchText: String { "" }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
-            Text("偏好设置")
-                .font(.headline)
-
-            // 通用
-            PreferenceSectionCard(title: "通用") {
-                PreferenceToggleRow(
-                    title: "登录时启动",
-                    description: "系统登录时自动启动应用",
-                    isOn: $isLaunchAtLoginEnabled
-                )
-                .onChange(of: isLaunchAtLoginEnabled) { newValue in
-                    _ = LaunchAtLoginService.setLaunchAtLogin(newValue)
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("偏好设置")
+                        .font(.headline.weight(.semibold))
+                    Text("管理启动方式、界面可见性以及高级输入行为。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
+                .padding(.leading, DesignTokens.Spacing.xs)
 
-                PreferenceToggleRow(
-                    title: "切换输入法时显示弹窗提示",
-                    description: "切换输入法时显示 HUD 提示",
-                    isOn: $showHUDOnSwitch
-                )
-                .onChange(of: showHUDOnSwitch) { newValue in
-                    Defaults[.showHUDOnSwitch] = newValue
-                }
-            }
-
-            // 显示
-            PreferenceSectionCard(title: "显示") {
-                PreferenceToggleRow(
-                    title: "隐藏菜单栏图标",
-                    description: "隐藏后可通过 Dock 图标访问应用",
-                    isOn: $isMenuBarHidden
-                )
-                .onChange(of: isMenuBarHidden) { newValue in
-                    AppVisibilityService.isMenuBarHidden = newValue
-                    showRestartAlert = true
-                }
-
-                PreferenceToggleRow(
-                    title: "隐藏 Dock 图标",
-                    description: "隐藏后仅通过菜单栏图标访问应用",
-                    isOn: $isDockHidden
-                )
-                .onChange(of: isDockHidden) { newValue in
-                    AppVisibilityService.isDockHidden = newValue
-                }
-            }
-
-            // 高级
-            PreferenceSectionCard(title: "高级") {
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
-                        Text("强制英文符号")
-                            .font(DesignTokens.Typography.cardTitle)
-                        Text("中文输入法下自动将标点符号转换为英文")
-                            .font(DesignTokens.Typography.cardSubtitle)
+                if !searchText.isEmpty {
+                    HStack(spacing: DesignTokens.Spacing.sm) {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .foregroundStyle(.secondary)
+                        Text("正在筛选包含“\(searchText)”的设置项")
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    .padding(.horizontal, DesignTokens.Spacing.xs)
+                }
 
+                PreferenceSectionCard(title: "通用", isVisible: matchesSection("通用", "登录时启动", "切换输入法时显示弹窗提示", "HUD")) {
+                    PreferenceToggleRow(
+                        title: "登录时启动",
+                        description: "系统登录时自动启动应用",
+                        isOn: $isLaunchAtLoginEnabled
+                    )
+                    .onChange(of: isLaunchAtLoginEnabled) { newValue in
+                        _ = LaunchAtLoginService.setLaunchAtLogin(newValue)
+                    }
+
+                    PreferenceToggleRow(
+                        title: "切换输入法时显示弹窗提示",
+                        description: "切换输入法时显示 HUD 提示",
+                        isOn: $showHUDOnSwitch,
+                        showsDivider: false
+                    )
+                    .onChange(of: showHUDOnSwitch) { newValue in
+                        Defaults[.showHUDOnSwitch] = newValue
+                    }
+                }
+
+                PreferenceSectionCard(title: "显示", isVisible: matchesSection("显示", "隐藏菜单栏图标", "隐藏 Dock 图标")) {
+                    PreferenceToggleRow(
+                        title: "隐藏菜单栏图标",
+                        description: "隐藏后可通过 Dock 图标访问应用",
+                        isOn: $isMenuBarHidden
+                    )
+                    .onChange(of: isMenuBarHidden) { newValue in
+                        AppVisibilityService.isMenuBarHidden = newValue
+                        showRestartAlert = true
+                    }
+
+                    PreferenceToggleRow(
+                        title: "隐藏 Dock 图标",
+                        description: "隐藏后仅通过菜单栏图标访问应用",
+                        isOn: $isDockHidden,
+                        showsDivider: false
+                    )
+                    .onChange(of: isDockHidden) { newValue in
+                        AppVisibilityService.isDockHidden = newValue
+                    }
+                }
+
+                PreferenceSectionCard(title: "高级", isVisible: matchesSection("高级", "强制英文符号", "辅助功能")) {
+                    PreferenceActionToggleRow(
+                        title: "强制英文符号",
+                        description: "中文输入法下自动将标点符号转换为英文",
+                        isOn: $forceEnglishPunctuationEnabled,
+                        showsDivider: forceEnglishPunctuationEnabled && !hasAccessibilityPermission,
+                        accessory: {
+                            Button(action: { showHelpPopover = true }) {
+                                Image(systemName: "questionmark.circle")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .focusable(false)
+                            .popover(isPresented: $showHelpPopover, arrowEdge: .trailing) {
+                                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                                    Text("功能说明")
+                                        .font(.headline)
+                                    Text("在中文输入法下自动将标点符号转换为英文。")
+                                    Text("需先开启此开关，然后在「应用规则」中开启特定应用。")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding()
+                                .frame(width: 250)
+                            }
+                        }
+                    )
+                    .onChange(of: forceEnglishPunctuationEnabled) { newValue in
+                        if isConfirmingForcePunctuation {
+                            isConfirmingForcePunctuation = false
+                            return
+                        }
+                        if newValue {
+                            forceEnglishPunctuationEnabled = false
+                            showForcePunctuationConfirmation = true
+                        } else {
+                            Defaults[.forceEnglishPunctuationEnabled] = false
+                            viewModel.updatePunctuationServiceState()
+                        }
+                    }
+
+                    if forceEnglishPunctuationEnabled && !hasAccessibilityPermission {
+                        PreferenceInlineNoteRow {
+                            HStack(spacing: DesignTokens.Spacing.sm) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.orange)
+                                Text("需要「辅助功能」权限才能工作")
+                                    .foregroundStyle(.secondary)
+                                Button("打开系统设置") {
+                                    PermissionService.openAccessibilitySettings()
+                                }
+                                .buttonStyle(.link)
+                                .focusable(false)
+                            }
+                            .font(.caption)
+                        }
+                    }
+                }
+
+                HStack(spacing: DesignTokens.Spacing.sm) {
                     Spacer()
-
-                    Button(action: { showHelpPopover = true }) {
-                        Image(systemName: "questionmark.circle")
-                            .foregroundStyle(.secondary)
+                    Button {
+                        exportConfiguration()
+                    } label: {
+                        Label("导出", systemImage: "square.and.arrow.up")
                     }
-                    .buttonStyle(.plain)
+                    .controlSize(.small)
                     .focusable(false)
-                    .popover(isPresented: $showHelpPopover, arrowEdge: .trailing) {
-                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                            Text("功能说明")
-                                .font(.headline)
-                            Text("在中文输入法下自动将标点符号转换为英文。")
-                            Text("需先开启此开关，然后在「应用规则」中开启特定应用。")
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding()
-                        .frame(width: 250)
-                    }
 
-                    Toggle("", isOn: $forceEnglishPunctuationEnabled)
-                        .toggleStyle(.switch)
-                        .focusable(false)
-                }
-                .onChange(of: forceEnglishPunctuationEnabled) { newValue in
-                    if isConfirmingForcePunctuation {
-                        isConfirmingForcePunctuation = false
-                        return
+                    Button {
+                        showImportConfirmation = true
+                    } label: {
+                        Label("导入", systemImage: "square.and.arrow.down")
                     }
-                    if newValue {
-                        forceEnglishPunctuationEnabled = false
-                        showForcePunctuationConfirmation = true
-                    } else {
-                        Defaults[.forceEnglishPunctuationEnabled] = false
-                        viewModel.updatePunctuationServiceState()
-                    }
-                }
-
-                if forceEnglishPunctuationEnabled && !hasAccessibilityPermission {
-                    HStack {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                        Text("需要「辅助功能」权限才能工作")
-                        Button("打开系统设置") {
-                            PermissionService.openAccessibilitySettings()
-                        }
-                        .buttonStyle(.link)
-                        .focusable(false)
-                    }
-                    .font(.caption)
+                    .controlSize(.small)
+                    .focusable(false)
                 }
             }
-
-            HStack {
-                Spacer()
-                Button("导出配置") {
-                    exportConfiguration()
-                }
-                Button("导入配置") {
-                    showImportConfirmation = true
-                }
-            }
+            .frame(maxWidth: DesignTokens.Sizes.contentWidth, alignment: .leading)
+            .padding(.horizontal, DesignTokens.Spacing.xl)
+            .padding(.vertical, DesignTokens.Spacing.lg)
         }
-        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             hasAccessibilityPermission = PermissionService.checkAccessibility()
@@ -195,6 +221,12 @@ struct PreferencesTab: View {
         }
     }
 
+    private func matchesSection(_ fragments: String...) -> Bool {
+        let keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !keyword.isEmpty else { return true }
+        return fragments.contains { $0.localizedCaseInsensitiveContains(keyword) }
+    }
+
     // MARK: - Import/Export
 
     private func exportConfiguration() {
@@ -229,31 +261,34 @@ struct PreferencesTab: View {
 
 private struct PreferenceSectionCard<Content: View>: View {
     let title: String
+    let isVisible: Bool
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(title)
-                    .font(DesignTokens.Typography.sectionHeader)
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
-            .padding(.horizontal, DesignTokens.Spacing.md)
-            .padding(.vertical, DesignTokens.Spacing.sm)
-            .background(DesignTokens.Colors.background.opacity(0.5))
+        if isVisible {
+            VStack(spacing: 0) {
+                HStack {
+                    Text(title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, DesignTokens.Spacing.md)
+                .padding(.vertical, 7)
 
-            VStack(spacing: DesignTokens.Spacing.md) {
-                content
+                Divider()
+
+                VStack(spacing: 0) {
+                    content
+                }
             }
-            .padding(DesignTokens.Spacing.md)
+            .background(DesignTokens.Colors.background.opacity(0.045))
+            .overlay {
+                RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md, style: .continuous)
+                    .stroke(DesignTokens.Colors.divider.opacity(0.24), lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md, style: .continuous))
         }
-        .background(DesignTokens.Colors.background)
-        .overlay {
-            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
-                .stroke(DesignTokens.Colors.divider, lineWidth: 1)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg))
     }
 }
 
@@ -261,6 +296,7 @@ private struct PreferenceToggleRow: View {
     let title: String
     let description: String
     @Binding var isOn: Bool
+    var showsDivider: Bool = true
 
     var body: some View {
         HStack(alignment: .center) {
@@ -269,14 +305,71 @@ private struct PreferenceToggleRow: View {
                     .font(DesignTokens.Typography.cardTitle)
                 Text(description)
                     .font(DesignTokens.Typography.cardSubtitle)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()
 
             Toggle("", isOn: $isOn)
-                .toggleStyle(.switch)
+                .toggleStyle(MinimalSwitchToggleStyle())
                 .focusable(false)
         }
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .padding(.vertical, 9)
+        .overlay(alignment: .bottom) {
+            if showsDivider {
+                Divider()
+                    .padding(.leading, DesignTokens.Spacing.md)
+            }
+        }
+    }
+}
+
+private struct PreferenceActionToggleRow<Accessory: View>: View {
+    let title: String
+    let description: String
+    @Binding var isOn: Bool
+    var showsDivider: Bool = true
+    @ViewBuilder let accessory: Accessory
+
+    var body: some View {
+        HStack(alignment: .center, spacing: DesignTokens.Spacing.sm) {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
+                Text(title)
+                    .font(DesignTokens.Typography.cardTitle)
+                Text(description)
+                    .font(DesignTokens.Typography.cardSubtitle)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            accessory
+
+            Toggle("", isOn: $isOn)
+                .toggleStyle(MinimalSwitchToggleStyle())
+                .focusable(false)
+        }
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .padding(.vertical, 9)
+        .overlay(alignment: .bottom) {
+            if showsDivider {
+                Divider()
+                    .padding(.leading, DesignTokens.Spacing.md)
+            }
+        }
+    }
+}
+
+private struct PreferenceInlineNoteRow<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack {
+            content
+            Spacer()
+        }
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .padding(.vertical, 8)
     }
 }

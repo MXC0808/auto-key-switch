@@ -16,9 +16,19 @@ struct AutoSwitchInputApp: App {
 					await inputMethodManager.refreshAllData()
 				}
 		} label: {
-			Image(systemName: "keyboard.badge.ellipsis")
+			Image(systemName: "keyboard")
+				.symbolRenderingMode(.monochrome)
+				.imageScale(.medium)
 		}
 		.menuBarExtraStyle(.menu)
+		.commands {
+			CommandGroup(after: .newItem) {
+				Button("打开主窗口") {
+					NotificationCenter.default.post(name: .showMainWindow, object: nil)
+				}
+				.keyboardShortcut("o", modifiers: .command)
+			}
+		}
 	}
 }
 
@@ -35,7 +45,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 		NotificationCenter.default.addObserver(
 			self,
 			selector: #selector(handleShowMainWindow),
-			name: NSNotification.Name("ShowMainWindow"),
+			name: .showMainWindow,
 			object: nil
 		)
 
@@ -57,10 +67,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 		// 初始化时更新 Dock 可见性
 		AppVisibilityService.updateDockVisibility()
+
+		DispatchQueue.main.async { [weak self] in
+			self?.showMainWindow()
+		}
 	}
 
 	func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-		// Dock 栏点击时打开主窗口
+		// Dock 栏点击时打开或唤回主窗口
 		showMainWindow()
 		return true
 	}
@@ -72,9 +86,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 	}
 
 	@objc func handleShowMainWindow() {
-		Task { @MainActor in
-			showMainWindow()
-		}
+		showMainWindow()
 	}
 
 	@objc func handleMenuBarVisibilityChanged() {
@@ -88,8 +100,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 				.environmentObject(InputMethodManager.shared)
 
 			let window = NSWindow(
-				contentRect: NSRect(x: 0, y: 0, width: 780, height: 520),
-				styleMask: [.titled, .closable, .fullSizeContentView],
+				contentRect: NSRect(x: 0, y: 0, width: 960, height: 620),
+				styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
 				backing: .buffered,
 				defer: false
 			)
@@ -97,19 +109,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 			window.title = "AutoKeySwitch"
 			window.titleVisibility = .hidden
 			window.titlebarAppearsTransparent = true
+			window.toolbarStyle = .unified
+			window.collectionBehavior.insert(.fullScreenPrimary)
 			window.contentView = NSHostingView(rootView: contentView)
+			window.minSize = NSSize(width: 860, height: 560)
 			window.center()
 			window.isReleasedWhenClosed = false
 			window.delegate = self
 
-			// Set max window size
-			window.maxSize = NSSize(width: 900, height: 680)
-
-			// Disable zoom and minimize buttons
-			window.standardWindowButton(.zoomButton)?.isEnabled = false
-			window.standardWindowButton(.miniaturizeButton)?.isEnabled = false
-
 			self.mainWindow = window
+		}
+
+		if mainWindow?.isMiniaturized == true {
+			mainWindow?.deminiaturize(nil)
 		}
 
 		mainWindow?.makeKeyAndOrderFront(nil)
@@ -117,9 +129,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 	}
 }
 
-// Handle window closing
 extension AppDelegate: NSWindowDelegate {
 	nonisolated func windowWillClose(_ notification: Notification) {
-		// 窗口关闭时不做任何处理，保持 mainWindow 引用以便重新打开
+		// 窗口关闭时保留引用，Dock、菜单栏和 Cmd+O 可快速唤回同一个窗口。
 	}
 }

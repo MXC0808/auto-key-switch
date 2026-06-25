@@ -5,7 +5,7 @@ import SwifterSwift
 /// 应用信息服务类，负责管理应用版本信息和相关链接
 enum AppInfoService {
     /// GitHub 仓库信息
-    private static let githubRepository = "ygsgdbd/TypeSwitch"
+    private static let githubRepository = "MXC0808/AutoKeySwitch"
     private static let githubBaseURL = "https://github.com"
     
     /// 获取应用版本信息

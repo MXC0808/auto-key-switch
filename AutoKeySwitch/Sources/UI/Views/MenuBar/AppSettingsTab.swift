@@ -5,10 +5,11 @@ import Defaults
 struct AppSettingsTab: View {
 	@EnvironmentObject private var viewModel: InputMethodManager
 	@State private var selectedApps: Set<String> = []
-	@State private var searchText = ""
 	@State private var showAddSheet = false
 	@State private var showDeleteConfirmation = false
 	@State private var lastSelectedIndex: Int? = nil
+
+	private var searchText: String { "" }
 
 	var filteredApps: [AppInfo] {
 		let apps = viewModel.appRulesListApps
@@ -19,105 +20,90 @@ struct AppSettingsTab: View {
 	}
 
 	var body: some View {
-		VStack(spacing: 0) {
-			// Search bar
-			HStack(spacing: DesignTokens.Spacing.sm) {
-				Image(systemName: "magnifyingglass")
-					.foregroundStyle(.secondary)
-				TextField("搜索应用", text: $searchText)
-					.textFieldStyle(.plain)
-			}
-			.padding(DesignTokens.Spacing.md)
-			.background(DesignTokens.Colors.background)
-
-
-			// Apps list
-			ScrollView {
-				LazyVStack(spacing: DesignTokens.Spacing.sm) {
-					ForEach(Array(filteredApps.enumerated()), id: \.element.bundleId) { index, app in
-						AppRuleCardView(
-							app: app,
-							isSelected: selectedApps.contains(app.bundleId),
-							onToggleSelection: { toggleSelection(for: app, at: index) },
-							onInputChange: { inputMethodId in
-								viewModel.setInputMethod(for: app, to: inputMethodId)
-							}
-						)
-					}
-				}
-				.padding(.horizontal)
-				.padding(.vertical, DesignTokens.Spacing.sm)
-			}
-
-			Divider()
-
-			// Bottom toolbar
-			HStack(spacing: DesignTokens.Spacing.md) {
-				// 添加按钮
-				Button(action: { showAddSheet = true }) {
-					Image(systemName: "plus.circle.fill")
-						.font(.title2)
-				}
-				.help("添加应用")
-				.accessibilityLabel("添加应用")
-		.focusable(false)
-
-				// 删除按钮
-				Button(action: { showDeleteConfirmation = true }) {
-					Image(systemName: "trash")
-						.font(.title2)
-				}
-				.disabled(selectedApps.isEmpty)
-				.buttonStyle(.bordered)
-				.help(selectedApps.isEmpty ? "选择应用后删除" : "删除选中 \(selectedApps.count) 个")
-				.accessibilityLabel("删除选中应用")
-		.focusable(false)
-
-				// 选中数量
-				if !selectedApps.isEmpty {
-					Text("(\(selectedApps.count))")
-						.font(.caption)
+		ScrollView {
+			VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+				VStack(alignment: .leading, spacing: 1) {
+					Text("应用规则")
+						.font(.headline.weight(.semibold))
+					Text("按应用设置输入法，标点作为辅助选项。")
+						.font(.caption2)
 						.foregroundStyle(.secondary)
 				}
+				.padding(.leading, DesignTokens.Spacing.xs)
 
-				Spacer()
+				InspectorTable(
+					summary: "\(filteredApps.count) 个应用",
+					actions: {
+						HStack(spacing: 4) {
+							Text("默认：")
+								.font(.caption)
+								.foregroundStyle(.secondary)
 
-				// 全局默认输入法
-				HStack(spacing: DesignTokens.Spacing.xs) {
-					Text("全局默认：")
-						.font(.subheadline)
-					Picker(
-						"",
-						selection: Binding(
-							get: { viewModel.defaultInputMethod ?? "" },
-							set: { newValue in
-								viewModel.setDefaultInputMethod(newValue.isEmpty ? nil : newValue)
+							CompactGlobalDefaultPicker()
+								.environmentObject(viewModel)
+						}
+
+						Divider()
+							.frame(height: 16)
+							.padding(.horizontal, DesignTokens.Spacing.xxs)
+
+						Button {
+							showAddSheet = true
+						} label: {
+							Image(systemName: "plus")
+						}
+						.buttonStyle(.borderless)
+						.controlSize(.small)
+						.focusable(false)
+						.help("添加应用规则")
+						.accessibilityLabel("添加应用规则")
+
+						Button(role: .destructive) {
+							showDeleteConfirmation = true
+						} label: {
+							Image(systemName: "trash")
+						}
+						.buttonStyle(.borderless)
+						.controlSize(.small)
+						.disabled(selectedApps.isEmpty)
+						.focusable(false)
+						.help(selectedApps.isEmpty ? "删除应用规则" : "删除选中的应用规则")
+						.accessibilityLabel("删除选中的应用规则")
+					},
+					columns: {
+						HStack(spacing: DesignTokens.Spacing.sm) {
+							HStack(spacing: DesignTokens.Spacing.sm) {
+								Color.clear
+									.frame(width: DesignTokens.Sizes.iconLarge, height: 1)
+								Text("应用")
+									.frame(maxWidth: .infinity, alignment: .leading)
 							}
-						)
-					) {
-						Text("---").tag("")
-						ForEach(viewModel.inputMethods) { method in
-							HStack(spacing: DesignTokens.Spacing.xs) {
-								if let icon = method.icon {
-									Image(nsImage: icon)
-										.resizable()
-										.frame(width: DesignTokens.Sizes.iconSmall, height: DesignTokens.Sizes.iconSmall)
-								} else {
-									Image(systemName: "keyboard")
-										.frame(width: DesignTokens.Sizes.iconSmall, height: DesignTokens.Sizes.iconSmall)
+							.frame(maxWidth: .infinity, alignment: .leading)
+							Text("输入法")
+								.frame(width: DesignTokens.Sizes.inspectorPickerWidth, alignment: .center)
+							Text("英文标点")
+								.frame(width: DesignTokens.Sizes.inspectorToggleWidth, alignment: .leading)
+						}
+					},
+					rows: {
+						ForEach(Array(filteredApps.enumerated()), id: \.element.bundleId) { index, app in
+							AppRuleCardView(
+								app: app,
+								isSelected: selectedApps.contains(app.bundleId),
+								onToggleSelection: { toggleSelection(for: app, at: index) },
+								onInputChange: { inputMethodId in
+									viewModel.setInputMethod(for: app, to: inputMethodId)
 								}
-								Text(method.name)
-							}.tag(method.id)
+							)
 						}
 					}
-					.pickerStyle(.menu)
-					.frame(width: DesignTokens.Sizes.globalPickerWidth)
-			.focusable(false)
-				}
+				)
 			}
-			.padding()
-			.background(DesignTokens.Colors.background)
+			.frame(maxWidth: DesignTokens.Sizes.contentWidth, alignment: .leading)
+			.padding(.horizontal, DesignTokens.Spacing.xl)
+			.padding(.vertical, DesignTokens.Spacing.lg)
 		}
+		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 		.sheet(isPresented: $showAddSheet) {
 			AddAppSheet()
 				.environmentObject(viewModel)
@@ -184,6 +170,83 @@ struct AppSettingsTab: View {
 	}
 }
 
+private struct CompactGlobalDefaultPicker: View {
+	@EnvironmentObject private var viewModel: InputMethodManager
+
+	private var currentMethodName: String {
+		guard let id = viewModel.defaultInputMethod,
+			  let method = viewModel.inputMethods.first(where: { $0.id == id }) else {
+			return "跟随系统"
+		}
+		return method.name
+	}
+
+	var body: some View {
+		Menu {
+			Button {
+				viewModel.setDefaultInputMethod(nil)
+			} label: {
+				Label("跟随系统", systemImage: viewModel.defaultInputMethod == nil ? "checkmark" : "")
+			}
+
+			Divider()
+
+			ForEach(viewModel.inputMethods) { method in
+				Button {
+					viewModel.setDefaultInputMethod(method.id)
+				} label: {
+					HStack(spacing: DesignTokens.Spacing.xs) {
+						if method.id == viewModel.defaultInputMethod {
+							Image(systemName: "checkmark")
+								.frame(width: 10)
+						} else {
+							Color.clear
+								.frame(width: 10, height: 10)
+						}
+
+						if let icon = method.icon {
+							Image(nsImage: icon)
+								.resizable()
+								.frame(width: DesignTokens.Sizes.iconSmall, height: DesignTokens.Sizes.iconSmall)
+						} else {
+							Image(systemName: "keyboard")
+								.frame(width: DesignTokens.Sizes.iconSmall, height: DesignTokens.Sizes.iconSmall)
+						}
+
+						Text(method.name)
+					}
+				}
+			}
+		} label: {
+			HStack(spacing: 6) {
+				Text(currentMethodName)
+					.font(.subheadline.weight(.medium))
+					.foregroundStyle(.primary)
+					.lineLimit(1)
+					.layoutPriority(1)
+
+				Image(systemName: "chevron.down")
+					.font(.system(size: 10, weight: .semibold))
+					.foregroundStyle(.secondary)
+			}
+			.padding(.horizontal, 10)
+			.padding(.vertical, 5)
+		}
+		.fixedSize()
+		.background {
+			RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md, style: .continuous)
+				.fill(Color.secondary.opacity(0.045))
+		}
+		.overlay {
+			RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md, style: .continuous)
+				.stroke(Color(NSColor.separatorColor).opacity(0.22), lineWidth: 1)
+		}
+		.focusable(false)
+		.help("设置默认输入法")
+		.accessibilityLabel("默认输入法：\(currentMethodName)")
+	}
+}
+
 // MARK: - App Rule Card View
 
 struct AppRuleCardView: View {
@@ -200,8 +263,30 @@ struct AppRuleCardView: View {
 		viewModel.getInputMethod(for: app) ?? ""
 	}
 
+	private var ruleDetail: String {
+		guard !currentSelection.isEmpty else { return "继承默认输入法" }
+		return viewModel.inputMethods.first(where: { $0.id == currentSelection })?.name ?? "已指定输入法"
+	}
+
+	private var punctuationTint: Color {
+		let isGlobalEnabled = Defaults[.forceEnglishPunctuationEnabled]
+		guard isGlobalEnabled else { return .secondary.opacity(0.45) }
+		return forceEnglishPunctuation ? .accentColor : .secondary
+	}
+
+	private var punctuationStatusText: String {
+		guard Defaults[.forceEnglishPunctuationEnabled] else { return "未启用" }
+		return forceEnglishPunctuation ? "强制英文" : "跟随输入法"
+	}
+
+	private var punctuationHelpText: String {
+		Defaults[.forceEnglishPunctuationEnabled]
+			? "中文输入法下将标点转换为英文"
+			: "请先在偏好设置 > 高级 中开启强制英文符号"
+	}
+
 	var body: some View {
-		HStack(spacing: DesignTokens.Spacing.md) {
+		HStack(spacing: DesignTokens.Spacing.sm) {
 			app.icon
 				.frame(width: DesignTokens.Sizes.iconLarge, height: DesignTokens.Sizes.iconLarge)
 
@@ -209,40 +294,13 @@ struct AppRuleCardView: View {
 				Text(app.name)
 					.font(DesignTokens.Typography.cardTitle)
 					.lineLimit(1)
-			}
-			.frame(minWidth: 100, alignment: .leading)
-
-			Spacer()
-
-			let isGlobalEnabled = Defaults[.forceEnglishPunctuationEnabled]
-
-			HStack(spacing: DesignTokens.Spacing.xs) {
-				Text("英文标点")
-					.font(DesignTokens.Typography.badgeText)
+					.truncationMode(.middle)
+				Text(ruleDetail)
+					.font(DesignTokens.Typography.cardSubtitle)
 					.foregroundStyle(.secondary)
-
-				Toggle("", isOn: $forceEnglishPunctuation)
-					.help(isGlobalEnabled ? "强制英文符号" : "请先在通用设置中开启总开关")
-					.toggleStyle(.switch)
-					.disabled(!isGlobalEnabled)
-					.opacity(isGlobalEnabled ? 1.0 : 0.4)
-					.focusable(false)
-					.onChange(of: forceEnglishPunctuation) { newValue in
-						var apps = Defaults[.forceEnglishPunctuationApps]
-						if newValue {
-							apps.insert(app.bundleId)
-						} else {
-							apps.remove(app.bundleId)
-						}
-						Defaults[.forceEnglishPunctuationApps] = apps
-						if app.bundleId == viewModel.currentActiveAppBundleId {
-							viewModel.updatePunctuationServiceState()
-						}
-					}
-					.onAppear {
-						forceEnglishPunctuation = Defaults[.forceEnglishPunctuationApps].contains(app.bundleId)
-					}
+					.lineLimit(1)
 			}
+			.frame(maxWidth: .infinity, alignment: .leading)
 
 			Picker("", selection: Binding(
 				get: { currentSelection },
@@ -270,27 +328,46 @@ struct AppRuleCardView: View {
 				}
 			}
 			.pickerStyle(.menu)
-			.frame(width: DesignTokens.Sizes.pickerWidth)
+			.controlSize(.small)
+			.frame(width: DesignTokens.Sizes.inspectorPickerWidth)
 			.focusable(false)
+
+			let isGlobalEnabled = Defaults[.forceEnglishPunctuationEnabled]
+
+			HStack(spacing: DesignTokens.Spacing.sm) {
+				Text(punctuationStatusText)
+					.font(.caption2)
+					.foregroundStyle(punctuationTint)
+					.lineLimit(1)
+					.frame(maxWidth: .infinity, alignment: .leading)
+
+				Toggle("", isOn: $forceEnglishPunctuation)
+					.help(punctuationHelpText)
+					.toggleStyle(MinimalSwitchToggleStyle())
+					.labelsHidden()
+					.disabled(!isGlobalEnabled)
+					.opacity(isGlobalEnabled ? 1.0 : 0.4)
+					.focusable(false)
+					.onChange(of: forceEnglishPunctuation) { newValue in
+						var apps = Defaults[.forceEnglishPunctuationApps]
+						if newValue {
+							apps.insert(app.bundleId)
+						} else {
+							apps.remove(app.bundleId)
+						}
+						Defaults[.forceEnglishPunctuationApps] = apps
+						if app.bundleId == viewModel.currentActiveAppBundleId {
+							viewModel.updatePunctuationServiceState()
+						}
+					}
+					.onAppear {
+						forceEnglishPunctuation = Defaults[.forceEnglishPunctuationApps].contains(app.bundleId)
+					}
+			}
+			.frame(width: DesignTokens.Sizes.inspectorToggleWidth, alignment: .leading)
 		}
-		.padding(.vertical, DesignTokens.Spacing.md)
-		.padding(.horizontal, DesignTokens.Spacing.md)
-		.background {
-			RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
-				.fill(isSelected ? DesignTokens.Colors.selectionHighlight : (isHovered ? DesignTokens.Colors.hoverBackground : DesignTokens.Colors.background))
-		}
-		.overlay {
-			RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
-				.stroke(isSelected ? DesignTokens.Colors.selectionBorder : DesignTokens.Colors.divider, lineWidth: 1)
-		}
-		.overlay(alignment: .leading) {
-			RoundedRectangle(cornerRadius: 1.5)
-				.fill(Color.accentColor)
-				.frame(width: 3)
-				.opacity(isSelected ? 1 : 0)
-		}
-		.animation(DesignTokens.Animation.fast, value: isSelected)
-		.animation(DesignTokens.Animation.fast, value: isHovered)
+		.frame(maxWidth: .infinity, alignment: .leading)
+		.inspectorRowStyle(isSelected: isSelected, isHovered: isHovered)
 		.contentShape(Rectangle())
 		.onTapGesture {
 			onToggleSelection()

@@ -46,6 +46,8 @@ enum DesignTokens {
 		static let hoverBackground = Color.accentColor.opacity(0.05)
 		static let divider = Color(NSColor.separatorColor)
 		static let background = Color(NSColor.controlBackgroundColor)
+		static let windowBackground = Color(NSColor.windowBackgroundColor)
+		static let secondaryBackground = Color(NSColor.underPageBackgroundColor)
 		static let sidebarActiveBackground = Color.gray.opacity(0.2)
 		static let sidebarPressedBackground = Color.gray.opacity(0.1)
 		static let cardHoverBackground = Color.blue.opacity(0.08)
@@ -60,6 +62,9 @@ enum DesignTokens {
 
 	/// 字体
 	enum Typography {
+		static let pageEyebrow: Font = .caption
+		static let pageTitle: Font = .title2.weight(.semibold)
+		static let pageSubtitle: Font = .subheadline
 		static let sidebarGroupTitle: Font = .system(size: 10)
 		static let sidebarItem: Font = .system(size: 13)
 		static let sidebarVersion: Font = .system(size: 12)
@@ -83,9 +88,14 @@ enum DesignTokens {
 		static let iconMedium: CGFloat = 20
 		static let iconLarge: CGFloat = 24
 		static let iconXL: CGFloat = 32
+		static let contentWidth: CGFloat = 920
 
 		static let pickerWidth: CGFloat = 160
 		static let globalPickerWidth: CGFloat = 180
+		static let inspectorPickerWidth: CGFloat = 164
+		static let inspectorToggleWidth: CGFloat = 132
+		static let inspectorStatusWidth: CGFloat = 210
+		static let inspectorActionWidth: CGFloat = 60
 	}
 
 	// MARK: - Sidebar
@@ -103,6 +113,18 @@ enum DesignTokens {
 // MARK: - View Extensions
 
 extension View {
+	/// 主内容面板样式
+	func panelStyle() -> some View {
+		self
+			.padding(DesignTokens.Spacing.lg)
+			.background(DesignTokens.Colors.background.opacity(0.72))
+			.overlay {
+				RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xl, style: .continuous)
+					.stroke(DesignTokens.Colors.divider.opacity(0.7), lineWidth: 1)
+			}
+			.clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xl, style: .continuous))
+	}
+
 	/// 统一的卡片样式
 	func cardStyle() -> some View {
 		self
@@ -142,5 +164,117 @@ extension View {
 					.fill(isHovered ? DesignTokens.Colors.hoverBackground : .clear)
 			}
 			.animation(DesignTokens.Animation.fast, value: isHovered)
+	}
+
+	func inspectorTableChrome() -> some View {
+		self
+			.background(DesignTokens.Colors.background.opacity(0.045))
+			.overlay {
+				RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md, style: .continuous)
+					.stroke(DesignTokens.Colors.divider.opacity(0.24), lineWidth: 1)
+			}
+			.clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md, style: .continuous))
+	}
+
+	func inspectorRowStyle(isSelected: Bool, isHovered: Bool) -> some View {
+		self
+			.padding(.horizontal, DesignTokens.Spacing.sm)
+			.padding(.vertical, 5)
+			.background {
+				RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md, style: .continuous)
+					.fill(isSelected ? DesignTokens.Colors.selectionHighlight : (isHovered ? DesignTokens.Colors.hoverBackground : Color.clear))
+			}
+			.overlay {
+				RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.md, style: .continuous)
+					.stroke(
+						isSelected ? DesignTokens.Colors.selectionBorder :
+						(isHovered ? DesignTokens.Colors.divider.opacity(0.18) : Color.clear),
+						lineWidth: 1
+					)
+			}
+			.padding(.horizontal, DesignTokens.Spacing.xs)
+			.animation(DesignTokens.Animation.fast, value: isSelected)
+			.animation(DesignTokens.Animation.fast, value: isHovered)
+	}
+}
+
+struct InspectorTable<Actions: View, Columns: View, Rows: View>: View {
+	let summary: String
+	@ViewBuilder let actions: Actions
+	@ViewBuilder let columns: Columns
+	@ViewBuilder let rows: Rows
+
+	var body: some View {
+		VStack(spacing: 0) {
+			HStack(spacing: DesignTokens.Spacing.sm) {
+				Text(summary)
+					.font(.caption)
+					.foregroundStyle(.secondary)
+					.lineLimit(1)
+				Spacer(minLength: DesignTokens.Spacing.md)
+				actions
+			}
+			.padding(.horizontal, DesignTokens.Spacing.md)
+			.padding(.vertical, 8)
+
+			Divider()
+
+			columns
+				.font(.caption)
+				.foregroundStyle(.secondary)
+				.padding(.horizontal, DesignTokens.Spacing.md)
+				.padding(.vertical, 5)
+
+			Divider()
+
+			rows
+		}
+		.inspectorTableChrome()
+	}
+}
+
+struct MinimalSwitchToggleStyle: ToggleStyle {
+	@Environment(\.isEnabled) private var isEnabled
+	@Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+	func makeBody(configuration: Configuration) -> some View {
+		HStack(spacing: DesignTokens.Spacing.sm) {
+			configuration.label
+
+			Button {
+				withAnimation(reduceMotion ? nil : DesignTokens.Animation.fast) {
+					configuration.isOn.toggle()
+				}
+			} label: {
+				ZStack(alignment: configuration.isOn ? .trailing : .leading) {
+					Capsule(style: .continuous)
+						.fill(trackFill(isOn: configuration.isOn))
+						.overlay {
+							Capsule(style: .continuous)
+								.stroke(trackStroke(isOn: configuration.isOn), lineWidth: 1)
+						}
+
+					Circle()
+						.fill(Color(nsColor: .controlBackgroundColor))
+						.shadow(color: .black.opacity(configuration.isOn ? 0.18 : 0.08), radius: 1.5, x: 0, y: 0.5)
+						.padding(2)
+				}
+				.frame(width: 34, height: 18)
+				.opacity(isEnabled ? 1.0 : 0.45)
+			}
+			.buttonStyle(.plain)
+			.focusable(false)
+			.disabled(!isEnabled)
+			.accessibilityLabel(configuration.isOn ? "开启" : "关闭")
+			.accessibilityValue(configuration.isOn ? "已开启" : "已关闭")
+		}
+	}
+
+	private func trackFill(isOn: Bool) -> Color {
+		isOn ? Color.accentColor.opacity(0.88) : Color.secondary.opacity(0.14)
+	}
+
+	private func trackStroke(isOn: Bool) -> Color {
+		isOn ? Color.accentColor.opacity(0.22) : DesignTokens.Colors.divider.opacity(0.55)
 	}
 }

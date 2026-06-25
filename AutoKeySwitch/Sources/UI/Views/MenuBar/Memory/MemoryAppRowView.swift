@@ -4,7 +4,6 @@ import Defaults
 struct MemoryAppRowView: View {
     @EnvironmentObject private var viewModel: InputMethodManager
     let app: AppInfo
-    let isRunning: Bool
     let isEnabled: Bool
     let isSelected: Bool
     let onToggleSelection: () -> Void
@@ -12,7 +11,6 @@ struct MemoryAppRowView: View {
     let onRemove: () -> Void
 
     @State private var isHovered = false
-    @State private var isAdded = false
 
     var lastMethodName: String? {
         guard let lastId = viewModel.lastInputMethodStates[app.bundleId],
@@ -22,8 +20,40 @@ struct MemoryAppRowView: View {
         return method.name
     }
 
+    private var detailText: String {
+        if let lastMethodName {
+            return "上次使用 \(lastMethodName)"
+        }
+        return isEnabled ? "等待离开应用后记录输入法" : "开启后记录离开时的输入法"
+    }
+
+    private var statusText: String {
+        if lastMethodName != nil { return "已记录" }
+        if isEnabled { return "等待记录" }
+        return "未启用"
+    }
+
+    private var statusColor: Color {
+        if lastMethodName != nil { return DesignTokens.Colors.statusRunning }
+        if isEnabled { return Color.secondary }
+        return Color.secondary.opacity(0.72)
+    }
+
+    private var memoryBinding: Binding<Bool> {
+        Binding(
+            get: { isEnabled },
+            set: { newValue in
+                if newValue {
+                    onAdd()
+                } else {
+                    onRemove()
+                }
+            }
+        )
+    }
+
     var body: some View {
-        HStack(spacing: DesignTokens.Spacing.md) {
+        HStack(spacing: DesignTokens.Spacing.sm) {
             app.icon
                 .frame(width: DesignTokens.Sizes.iconLarge, height: DesignTokens.Sizes.iconLarge)
 
@@ -31,70 +61,39 @@ struct MemoryAppRowView: View {
                 Text(app.name)
                     .font(DesignTokens.Typography.cardTitle)
                     .lineLimit(1)
+                    .truncationMode(.middle)
+            }
 
-                Text(lastMethodName.map { "上次: \($0)" } ?? "暂无记录")
+            Spacer(minLength: DesignTokens.Spacing.sm)
+
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
+                HStack(spacing: DesignTokens.Spacing.xs) {
+                    Circle()
+                        .fill(statusColor.opacity(isEnabled ? 0.85 : 0.35))
+                        .frame(width: 6, height: 6)
+
+                    Text(statusText)
+                        .font(.caption)
+                        .foregroundStyle(statusColor)
+                }
+
+                Text(detailText)
                     .font(DesignTokens.Typography.cardSubtitle)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
+            .frame(width: DesignTokens.Sizes.inspectorStatusWidth, alignment: .leading)
 
-            Spacer()
-
-            if isRunning {
-                MemoryStatusBadge(title: "● 运行中", color: DesignTokens.Colors.statusRunning)
-            } else if isEnabled {
-                MemoryStatusBadge(title: "未运行", color: .secondary, backgroundOpacity: 0.08)
-            }
-
-            if isEnabled {
-                MemoryStatusBadge(title: "已启用", color: .accentColor)
-            } else if isRunning && isAdded {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(.green)
-            } else if isRunning {
-                Button(action: {
-                    isAdded = true
-                    onAdd()
-                }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(DesignTokens.Colors.statusRunning)
-                }
-                .buttonStyle(.plain)
+            Toggle("", isOn: memoryBinding)
+                .toggleStyle(MinimalSwitchToggleStyle())
+                .labelsHidden()
                 .focusable(false)
-                .accessibilityLabel("启用 \(app.name) 的记忆功能")
-            }
-
-            if isHovered && isEnabled {
-                Button(action: onRemove) {
-                    Image(systemName: "trash")
-                        .foregroundStyle(DesignTokens.Colors.destructive)
-                }
-                .buttonStyle(.plain)
-                .transition(.opacity)
-                .focusable(false)
-                .accessibilityLabel("移除 \(app.name) 的记忆功能")
-            }
+                .help(isEnabled ? "关闭 \(app.name) 的记忆功能" : "启用 \(app.name) 的记忆功能")
+                .accessibilityLabel(isEnabled ? "关闭 \(app.name) 的记忆功能" : "启用 \(app.name) 的记忆功能")
+                .frame(maxWidth: .infinity, alignment: .center)
+                .frame(width: DesignTokens.Sizes.inspectorActionWidth, alignment: .center)
         }
-        .padding(.vertical, DesignTokens.Spacing.md)
-        .padding(.horizontal, DesignTokens.Spacing.md)
-        .background {
-            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
-                .fill(isSelected ? DesignTokens.Colors.selectionHighlight : (isHovered ? DesignTokens.Colors.hoverBackground : DesignTokens.Colors.background))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.lg)
-                .stroke(isSelected ? DesignTokens.Colors.selectionBorder : DesignTokens.Colors.divider, lineWidth: 1)
-        }
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 1.5)
-                .fill(Color.accentColor)
-                .frame(width: 3)
-                .opacity(isSelected ? 1 : 0)
-        }
-        .opacity(isRunning ? 1.0 : 0.7)
-        .animation(DesignTokens.Animation.fast, value: isSelected)
-        .animation(DesignTokens.Animation.fast, value: isHovered)
+        .inspectorRowStyle(isSelected: isSelected, isHovered: isHovered)
         .contentShape(Rectangle())
         .onTapGesture {
             onToggleSelection()
@@ -104,24 +103,5 @@ struct MemoryAppRowView: View {
                 isHovered = hovering
             }
         }
-        .onChange(of: isEnabled) { newValue in
-            if !newValue { isAdded = false }
-        }
-    }
-}
-
-private struct MemoryStatusBadge: View {
-    let title: String
-    let color: Color
-    var backgroundOpacity: Double = 0.12
-
-    var body: some View {
-        Text(title)
-            .font(DesignTokens.Typography.badgeText)
-            .foregroundStyle(color)
-            .padding(.horizontal, DesignTokens.Spacing.sm)
-            .padding(.vertical, DesignTokens.Spacing.xs)
-            .background(color.opacity(backgroundOpacity))
-            .cornerRadius(DesignTokens.CornerRadius.sm)
     }
 }
