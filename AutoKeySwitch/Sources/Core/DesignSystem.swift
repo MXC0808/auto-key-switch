@@ -196,6 +196,14 @@ extension View {
 			.animation(DesignTokens.Animation.fast, value: isSelected)
 			.animation(DesignTokens.Animation.fast, value: isHovered)
 	}
+
+	func fixedBottomBarStyle() -> some View {
+		self
+			.background(.ultraThinMaterial)
+			.overlay(alignment: .top) {
+				Divider()
+			}
+	}
 }
 
 struct InspectorTable<Actions: View, Columns: View, Rows: View>: View {

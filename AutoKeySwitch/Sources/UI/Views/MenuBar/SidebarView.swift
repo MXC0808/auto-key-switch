@@ -13,16 +13,16 @@ struct SidebarView: View {
 				state: .followsWindowActiveState
 			)
 
-			VStack(alignment: .leading, spacing: DesignTokens.Spacing.lg) {
+			VStack(alignment: .leading, spacing: 18) {
 				VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
 					Text("AutoKeySwitch")
-						.font(.headline.weight(.semibold))
+						.font(.system(size: 20, weight: .semibold))
 					Text("输入法自动切换与状态记忆")
-						.font(.caption2)
+						.font(.system(size: 11))
 						.foregroundStyle(.secondary)
 				}
 				.padding(.horizontal, DesignTokens.Spacing.xl)
-				.padding(.top, DesignTokens.Spacing.md)
+				.padding(.top, 14)
 
 				Divider()
 					.padding(.horizontal, DesignTokens.Spacing.lg)
@@ -59,7 +59,7 @@ struct SidebarView: View {
 					.padding(.horizontal, DesignTokens.Spacing.lg)
 					.padding(.bottom, DesignTokens.Spacing.sm)
 			}
-			.padding(.vertical, DesignTokens.Spacing.md)
+		.padding(.vertical, 14)
 		}
 		.frame(width: DesignTokens.Sidebar.width)
 	}
@@ -81,14 +81,14 @@ struct NavItemRow: View {
 				.foregroundStyle(isActive ? Color.accentColor : Color.secondary)
 
 			Text(item.displayName)
-				.font(DesignTokens.Typography.sidebarItem)
+				.font(.system(size: 14, weight: isActive ? .semibold : .regular))
 				.lineLimit(1)
 
 			Spacer()
 		}
 		.padding(.leading, DesignTokens.Spacing.md)
 		.padding(.trailing, DesignTokens.Spacing.md)
-		.padding(.vertical, 8)
+		.padding(.vertical, 10)
 		.frame(maxWidth: .infinity)
 		.background {
 			RoundedRectangle(cornerRadius: DesignTokens.Sidebar.cornerRadius, style: .continuous)
@@ -98,19 +98,12 @@ struct NavItemRow: View {
 					Color.clear
 				)
 		}
-		.overlay(alignment: .leading) {
-			RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-				.fill(Color.accentColor)
-				.frame(width: 3, height: 16)
-				.opacity(isActive ? 1 : 0)
-				.padding(.leading, 6)
-		}
 		.animation(DesignTokens.Animation.fast, value: isActive)
 		.animation(DesignTokens.Animation.fast, value: isHovered)
 		.foregroundStyle(Color.primary)
 		.clipShape(RoundedRectangle(cornerRadius: DesignTokens.Sidebar.cornerRadius))
 		.contentShape(Rectangle())
-		.padding(.horizontal, DesignTokens.Spacing.sm)
+		.padding(.horizontal, 10)
 		.onTapGesture { action() }
 		.onHover { hovering in
 			withAnimation(DesignTokens.Animation.fast) {

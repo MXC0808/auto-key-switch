@@ -4,12 +4,11 @@ import Defaults
 /// Application rules settings interface
 struct AppSettingsTab: View {
 	@EnvironmentObject private var viewModel: InputMethodManager
+	@Binding var searchText: String
 	@State private var selectedApps: Set<String> = []
 	@State private var showAddSheet = false
 	@State private var showDeleteConfirmation = false
-	@State private var lastSelectedIndex: Int? = nil
-
-	private var searchText: String { "" }
+	@State private var lastSelectedBundleID: String? = nil
 
 	var filteredApps: [AppInfo] {
 		let apps = viewModel.appRulesListApps
@@ -19,89 +18,74 @@ struct AppSettingsTab: View {
 		return apps.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
 	}
 
+	private var visibleSelectedBundleIDs: Set<String> {
+		Set(filteredApps.map(\.bundleId)).intersection(selectedApps)
+	}
+
+	private var visibleSelectedCount: Int {
+		visibleSelectedBundleIDs.count
+	}
+
 	var body: some View {
-		ScrollView {
-			VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-				VStack(alignment: .leading, spacing: 1) {
-					Text("应用规则")
-						.font(.headline.weight(.semibold))
-					Text("按应用设置输入法，标点作为辅助选项。")
-						.font(.caption2)
-						.foregroundStyle(.secondary)
-				}
-				.padding(.leading, DesignTokens.Spacing.xs)
-
-				InspectorTable(
-					summary: "\(filteredApps.count) 个应用",
-					actions: {
-						HStack(spacing: 4) {
-							Text("默认：")
-								.font(.caption)
-								.foregroundStyle(.secondary)
-
-							CompactGlobalDefaultPicker()
-								.environmentObject(viewModel)
-						}
-
-						Divider()
-							.frame(height: 16)
-							.padding(.horizontal, DesignTokens.Spacing.xxs)
-
-						Button {
-							showAddSheet = true
-						} label: {
-							Image(systemName: "plus")
-						}
-						.buttonStyle(.borderless)
-						.controlSize(.small)
-						.focusable(false)
-						.help("添加应用规则")
-						.accessibilityLabel("添加应用规则")
-
-						Button(role: .destructive) {
-							showDeleteConfirmation = true
-						} label: {
-							Image(systemName: "trash")
-						}
-						.buttonStyle(.borderless)
-						.controlSize(.small)
-						.disabled(selectedApps.isEmpty)
-						.focusable(false)
-						.help(selectedApps.isEmpty ? "删除应用规则" : "删除选中的应用规则")
-						.accessibilityLabel("删除选中的应用规则")
-					},
-					columns: {
-						HStack(spacing: DesignTokens.Spacing.sm) {
-							HStack(spacing: DesignTokens.Spacing.sm) {
-								Color.clear
-									.frame(width: DesignTokens.Sizes.iconLarge, height: 1)
-								Text("应用")
-									.frame(maxWidth: .infinity, alignment: .leading)
-							}
-							.frame(maxWidth: .infinity, alignment: .leading)
-							Text("输入法")
-								.frame(width: DesignTokens.Sizes.inspectorPickerWidth, alignment: .center)
-							Text("英文标点")
-								.frame(width: DesignTokens.Sizes.inspectorToggleWidth, alignment: .leading)
-						}
-					},
-					rows: {
-						ForEach(Array(filteredApps.enumerated()), id: \.element.bundleId) { index, app in
-							AppRuleCardView(
-								app: app,
-								isSelected: selectedApps.contains(app.bundleId),
-								onToggleSelection: { toggleSelection(for: app, at: index) },
-								onInputChange: { inputMethodId in
-									viewModel.setInputMethod(for: app, to: inputMethodId)
-								}
-							)
-						}
+		VStack(spacing: 0) {
+			ScrollView {
+				VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+					VStack(alignment: .leading, spacing: 1) {
+						Text("应用规则")
+							.font(.headline.weight(.semibold))
+						Text("按应用设置输入法，标点作为辅助选项。")
+							.font(.caption2)
+							.foregroundStyle(.secondary)
 					}
-				)
+					.padding(.leading, DesignTokens.Spacing.xs)
+
+					InspectorTable(
+						summary: "\(filteredApps.count) 个应用",
+						actions: {
+							EmptyView()
+						},
+						columns: {
+							HStack(spacing: DesignTokens.Spacing.sm) {
+								HStack(spacing: DesignTokens.Spacing.sm) {
+									Color.clear
+										.frame(width: DesignTokens.Sizes.iconLarge, height: 1)
+									Text("应用")
+										.frame(maxWidth: .infinity, alignment: .leading)
+								}
+								.frame(maxWidth: .infinity, alignment: .leading)
+								Text("输入法")
+									.frame(width: DesignTokens.Sizes.inspectorPickerWidth, alignment: .center)
+								Text("英文标点")
+									.frame(width: DesignTokens.Sizes.inspectorToggleWidth, alignment: .leading)
+							}
+						},
+						rows: {
+							ForEach(Array(filteredApps.enumerated()), id: \.element.bundleId) { index, app in
+								AppRuleCardView(
+									app: app,
+									isSelected: selectedApps.contains(app.bundleId),
+									onToggleSelection: { toggleSelection(for: app, at: index) },
+									onInputChange: { inputMethodId in
+										viewModel.setInputMethod(for: app, to: inputMethodId)
+									}
+								)
+							}
+						}
+					)
+				}
+				.frame(maxWidth: DesignTokens.Sizes.contentWidth, alignment: .leading)
+				.padding(.horizontal, DesignTokens.Spacing.xl)
+				.padding(.vertical, DesignTokens.Spacing.lg)
 			}
-			.frame(maxWidth: DesignTokens.Sizes.contentWidth, alignment: .leading)
-			.padding(.horizontal, DesignTokens.Spacing.xl)
-			.padding(.vertical, DesignTokens.Spacing.lg)
+
+			AppRulesBottomBar(
+				appCount: filteredApps.count,
+				selectedCount: visibleSelectedCount,
+				isDeleteDisabled: visibleSelectedBundleIDs.isEmpty,
+				onAdd: { showAddSheet = true },
+				onDelete: { showDeleteConfirmation = true }
+			)
+			.environmentObject(viewModel)
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 		.sheet(isPresented: $showAddSheet) {
@@ -109,7 +93,7 @@ struct AppSettingsTab: View {
 				.environmentObject(viewModel)
 		}
 		.confirmationDialog(
-			"确定要删除选中的 \(selectedApps.count) 个应用规则吗？",
+			"确定要删除选中的 \(visibleSelectedCount) 个应用规则吗？",
 			isPresented: $showDeleteConfirmation,
 			titleVisibility: .visible
 		) {
@@ -127,10 +111,12 @@ struct AppSettingsTab: View {
 		let hasCommand = NSEvent.modifierFlags.contains(.command)
 		let hasShift = NSEvent.modifierFlags.contains(.shift)
 
-		if hasShift && lastSelectedIndex != nil {
+		if hasShift,
+		   let lastSelectedBundleID,
+		   let anchorIndex = filteredApps.firstIndex(where: { $0.bundleId == lastSelectedBundleID }) {
 			// Shift + click: 范围选择
-			let start = min(lastSelectedIndex!, index)
-			let end = max(lastSelectedIndex!, index)
+			let start = min(anchorIndex, index)
+			let end = max(anchorIndex, index)
 
 			withAnimation(DesignTokens.Animation.normal) {
 				for i in start...end {
@@ -144,29 +130,105 @@ struct AppSettingsTab: View {
 			} else {
 				selectedApps.insert(app.bundleId)
 			}
-			lastSelectedIndex = index
+			lastSelectedBundleID = app.bundleId
 		} else {
 			// Normal click: single select
 			if selectedApps.contains(app.bundleId) && selectedApps.count == 1 {
 				selectedApps.removeAll()
-				lastSelectedIndex = nil
+				lastSelectedBundleID = nil
 			} else {
 				withAnimation(DesignTokens.Animation.fast) {
 					selectedApps = [app.bundleId]
 				}
-				lastSelectedIndex = index
+				lastSelectedBundleID = app.bundleId
 			}
 		}
 	}
 
 	private func deleteSelectedApps() {
-		for bundleId in selectedApps {
+		let bundleIDsToDelete = visibleSelectedBundleIDs
+
+		for bundleId in bundleIDsToDelete {
 			if let app = viewModel.installedApps.first(where: { $0.bundleId == bundleId }) {
 				viewModel.setInputMethod(for: app, to: nil)
 			}
 		}
-		selectedApps.removeAll()
-		lastSelectedIndex = nil
+		selectedApps.subtract(bundleIDsToDelete)
+		if let lastSelectedBundleID,
+		   bundleIDsToDelete.contains(lastSelectedBundleID) {
+			self.lastSelectedBundleID = nil
+		}
+	}
+}
+
+private struct AppRulesBottomBar: View {
+	@EnvironmentObject private var viewModel: InputMethodManager
+
+	let appCount: Int
+	let selectedCount: Int
+	let isDeleteDisabled: Bool
+	let onAdd: () -> Void
+	let onDelete: () -> Void
+
+	private var selectionSummary: String {
+		if selectedCount > 0 {
+			return "\(appCount) 个应用  已选 \(selectedCount) 个"
+		}
+		return "\(appCount) 个应用"
+	}
+
+	var body: some View {
+		HStack(spacing: DesignTokens.Spacing.lg) {
+			Text(selectionSummary)
+				.font(.caption)
+				.foregroundStyle(.secondary)
+				.lineLimit(1)
+
+			Spacer(minLength: DesignTokens.Spacing.lg)
+
+			HStack(spacing: 10) {
+				Text("默认输入法")
+					.font(.caption)
+					.foregroundStyle(.secondary)
+
+				CompactGlobalDefaultPicker()
+					.environmentObject(viewModel)
+			}
+
+			Spacer(minLength: DesignTokens.Spacing.lg)
+
+			HStack(spacing: DesignTokens.Spacing.md) {
+				Button {
+					onAdd()
+				} label: {
+					Image(systemName: "plus")
+						.font(.system(size: 15, weight: .medium))
+				}
+				.buttonStyle(.plain)
+				.foregroundStyle(.secondary)
+				.focusable(false)
+				.help("添加应用规则")
+				.accessibilityLabel("添加应用规则")
+
+				Button(role: .destructive) {
+					onDelete()
+				} label: {
+					Image(systemName: "trash")
+						.font(.system(size: 15, weight: .medium))
+				}
+				.buttonStyle(.plain)
+				.disabled(isDeleteDisabled)
+				.foregroundStyle(isDeleteDisabled ? .tertiary : .secondary)
+				.focusable(false)
+				.help(isDeleteDisabled ? "删除应用规则" : "删除选中的应用规则")
+				.accessibilityLabel("删除选中的应用规则")
+			}
+		}
+		.frame(maxWidth: .infinity, alignment: .center)
+		.frame(maxWidth: DesignTokens.Sizes.contentWidth)
+		.padding(.horizontal, 28)
+		.padding(.vertical, 12)
+		.fixedBottomBarStyle()
 	}
 }
 
@@ -383,7 +445,7 @@ struct AppRuleCardView: View {
 }
 
 #Preview {
-	AppSettingsTab()
+	AppSettingsTab(searchText: .constant(""))
 		.environmentObject(InputMethodManager.shared)
 		.frame(width: 550, height: 500)
 }

@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 /// Preferences tab
 struct PreferencesTab: View {
     @EnvironmentObject private var viewModel: InputMethodManager
+    @Binding var searchText: String
     @State private var isLaunchAtLoginEnabled = LaunchAtLoginService.isEnabled
     @State private var isMenuBarHidden = AppVisibilityService.isMenuBarHidden
     @State private var isDockHidden = AppVisibilityService.isDockHidden
@@ -18,8 +19,6 @@ struct PreferencesTab: View {
     @State private var showImportConfirmation = false
     @State private var showImportError = false
     @State private var showHUDOnSwitch = Defaults[.showHUDOnSwitch]
-
-    private var searchText: String { "" }
 
     var body: some View {
         ScrollView {
@@ -372,4 +371,10 @@ private struct PreferenceInlineNoteRow<Content: View>: View {
         .padding(.horizontal, DesignTokens.Spacing.md)
         .padding(.vertical, 8)
     }
+}
+
+#Preview {
+    PreferencesTab(searchText: .constant(""))
+        .environmentObject(InputMethodManager.shared)
+        .frame(width: 600, height: 560)
 }

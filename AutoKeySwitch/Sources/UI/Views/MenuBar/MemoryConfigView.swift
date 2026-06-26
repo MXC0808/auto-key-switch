@@ -11,11 +11,10 @@ struct MemoryDisplayApp: Identifiable {
 /// Short-term memory configuration main interface
 struct MemoryConfigView: View {
     @EnvironmentObject private var viewModel: InputMethodManager
+    @Binding var searchText: String
     @State private var selectedApps: Set<String> = []
     @State private var showClearConfirmation = false
     @State private var showLimitAlert = false
-
-    private var searchText: String { "" }
 
     private var unifiedApps: [MemoryDisplayApp] {
         let runningApps = viewModel.runningApps.map { app in
@@ -29,88 +28,96 @@ struct MemoryConfigView: View {
         }
     }
 
+    private var visibleSelectedBundleIDs: Set<String> {
+        Set(unifiedApps.map(\.app.bundleId)).intersection(selectedApps)
+    }
+
+    private var visibleSelectedCount: Int {
+        visibleSelectedBundleIDs.count
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("应用记忆")
-                        .font(.headline.weight(.semibold))
-                    Text("让应用在切回前台时恢复上次输入法。")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.leading, DesignTokens.Spacing.xs)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("应用记忆")
+                            .font(.headline.weight(.semibold))
+                        Text("让应用在切回前台时恢复上次输入法。")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.leading, DesignTokens.Spacing.xs)
 
-                InspectorTable(
-                    summary: "\(unifiedApps.count) 个运行中应用" + (selectedApps.isEmpty ? "" : " · 已选 \(selectedApps.count) 个"),
-                    actions: {
-                        if !viewModel.memoryEnabledAppsInfo.isEmpty {
-                            Button(role: .destructive, action: { showClearConfirmation = true }) {
-                                Image(systemName: "trash.slash")
+                    InspectorTable(
+                        summary: "运行中应用",
+                        actions: {
+                            EmptyView()
+                        },
+                        columns: {
+                            HStack(spacing: DesignTokens.Spacing.sm) {
+                                HStack(spacing: DesignTokens.Spacing.sm) {
+                                    Color.clear
+                                        .frame(width: DesignTokens.Sizes.iconLarge, height: 1)
+                                    Text("应用")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                Text("记忆状态")
+                                    .frame(width: DesignTokens.Sizes.inspectorStatusWidth, alignment: .leading)
+                                Text("启用")
+                                    .frame(width: DesignTokens.Sizes.inspectorActionWidth, alignment: .center)
                             }
-                            .buttonStyle(.borderless)
-                            .controlSize(.small)
-                            .focusable(false)
-                            .help("清空全部记忆配置")
-                            .accessibilityLabel("清空全部记忆配置")
-                        }
+                        },
+                        rows: {
+                            if unifiedApps.isEmpty {
+                                MemoryEmptyStateView(isSearching: !searchText.isEmpty)
+                            } else {
+                                ForEach(unifiedApps) { displayApp in
+                                    VStack(spacing: 0) {
+                                        MemoryAppRowView(
+                                            app: displayApp.app,
+                                            isEnabled: displayApp.isEnabled,
+                                            isSelected: selectedApps.contains(displayApp.app.bundleId),
+                                            onToggleSelection: {
+                                                toggleSelection(for: displayApp.app)
+                                            },
+                                            onAdd: {
+                                                addApp(displayApp.app)
+                                            },
+                                            onRemove: {
+                                                viewModel.removeAppsFromMemory([displayApp.app])
+                                                selectedApps.remove(displayApp.app.bundleId)
+                                            }
+                                        )
 
-                        if selectedApps.count > 0 {
-                            Button(role: .destructive, action: deleteSelectedApps) {
-                                Image(systemName: "trash")
-                            }
-                            .buttonStyle(.borderless)
-                            .controlSize(.small)
-                            .focusable(false)
-                            .help("移除选中的记忆配置")
-                            .accessibilityLabel("移除选中的记忆配置")
-                        }
-                    },
-                    columns: {
-                        HStack(spacing: DesignTokens.Spacing.sm) {
-                            Text("应用")
-                            Spacer()
-                            Text("记忆状态")
-                                .frame(width: DesignTokens.Sizes.inspectorStatusWidth, alignment: .leading)
-                            Text("启用")
-                                .frame(width: DesignTokens.Sizes.inspectorActionWidth, alignment: .center)
-                        }
-                    },
-                    rows: {
-                        if unifiedApps.isEmpty {
-                            MemoryEmptyStateView(isSearching: !searchText.isEmpty)
-                        } else {
-                            ForEach(unifiedApps) { displayApp in
-                                MemoryAppRowView(
-                                    app: displayApp.app,
-                                    isEnabled: displayApp.isEnabled,
-                                    isSelected: selectedApps.contains(displayApp.app.bundleId),
-                                    onToggleSelection: {
-                                        toggleSelection(for: displayApp.app)
-                                    },
-                                    onAdd: {
-                                        addApp(displayApp.app)
-                                    },
-                                    onRemove: {
-                                        viewModel.removeAppsFromMemory([displayApp.app])
-                                        selectedApps.remove(displayApp.app.bundleId)
+                                        if displayApp.id != unifiedApps.last?.id {
+                                            Divider()
+                                                .padding(.leading, 58)
+                                        }
                                     }
-                                )
-
-                                if displayApp.id != unifiedApps.last?.id {
-                                    Divider()
-                                        .padding(.leading, 58)
                                 }
                             }
                         }
-                    }
-                )
+                    )
+                }
+                .frame(maxWidth: DesignTokens.Sizes.contentWidth, alignment: .leading)
+                .padding(.horizontal, DesignTokens.Spacing.xl)
+                .padding(.top, 14)
+                .padding(.bottom, 14)
             }
-            .frame(maxWidth: DesignTokens.Sizes.contentWidth, alignment: .leading)
-            .padding(.horizontal, DesignTokens.Spacing.xl)
-            .padding(.vertical, DesignTokens.Spacing.lg)
+
+            MemoryBottomBar(
+                appCount: unifiedApps.count,
+                selectedCount: visibleSelectedCount,
+                isClearDisabled: viewModel.memoryEnabledApps.isEmpty,
+                isDeleteDisabled: visibleSelectedBundleIDs.isEmpty,
+                onClear: { showClearConfirmation = true },
+                onDelete: deleteSelectedApps
+            )
         }
-        .alert("已达最大数量限制（20 个）", isPresented: $showLimitAlert) {
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .alert("已达最大数量限制（\(Constants.maxMemoryEnabledApps) 个）", isPresented: $showLimitAlert) {
             Button("确定", role: .cancel) {}
         }
         .confirmationDialog(
@@ -146,9 +153,72 @@ struct MemoryConfigView: View {
     }
 
     private func deleteSelectedApps() {
-        let toRemove = viewModel.runningApps.filter { selectedApps.contains($0.bundleId) }
+        let bundleIDsToRemove = visibleSelectedBundleIDs
+        let toRemove = unifiedApps
+            .map(\.app)
+            .filter { bundleIDsToRemove.contains($0.bundleId) }
         viewModel.removeAppsFromMemory(toRemove)
-        selectedApps.removeAll()
+        selectedApps.subtract(bundleIDsToRemove)
+    }
+}
+
+private struct MemoryBottomBar: View {
+    let appCount: Int
+    let selectedCount: Int
+    let isClearDisabled: Bool
+    let isDeleteDisabled: Bool
+    let onClear: () -> Void
+    let onDelete: () -> Void
+
+    private var selectionSummary: String {
+        if selectedCount > 0 {
+            return "\(appCount) 个应用  已选 \(selectedCount) 个"
+        }
+        return "\(appCount) 个应用"
+    }
+
+    var body: some View {
+        HStack(spacing: DesignTokens.Spacing.lg) {
+            Text(selectionSummary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            Spacer(minLength: DesignTokens.Spacing.lg)
+
+            HStack(spacing: DesignTokens.Spacing.md) {
+                Button(role: .destructive) {
+                    onClear()
+                } label: {
+                    Image(systemName: "trash.slash")
+                        .font(.system(size: 15, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .disabled(isClearDisabled)
+                .foregroundStyle(isClearDisabled ? .tertiary : .secondary)
+                .focusable(false)
+                .help("清空全部记忆配置")
+                .accessibilityLabel("清空全部记忆配置")
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 15, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .disabled(isDeleteDisabled)
+                .foregroundStyle(isDeleteDisabled ? .tertiary : .secondary)
+                .focusable(false)
+                .help(isDeleteDisabled ? "移除记忆配置" : "移除选中的记忆配置")
+                .accessibilityLabel("移除选中的记忆配置")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .frame(maxWidth: DesignTokens.Sizes.contentWidth)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 12)
+        .fixedBottomBarStyle()
     }
 }
 
@@ -173,7 +243,7 @@ private struct MemoryEmptyStateView: View {
 }
 
 #Preview {
-    MemoryConfigView()
+    MemoryConfigView(searchText: .constant(""))
         .environmentObject(InputMethodManager.shared)
         .frame(width: 500, height: 500)
 }

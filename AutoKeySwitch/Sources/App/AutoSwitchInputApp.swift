@@ -107,7 +107,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 			)
 
 			window.title = "AutoKeySwitch"
-			window.titleVisibility = .hidden
+			window.titleVisibility = .visible
 			window.titlebarAppearsTransparent = true
 			window.toolbarStyle = .unified
 			window.collectionBehavior.insert(.fullScreenPrimary)
