@@ -28,38 +28,27 @@ struct AppSettingsTab: View {
 
 	var body: some View {
 		VStack(spacing: 0) {
-			ScrollView {
-				VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-					VStack(alignment: .leading, spacing: 1) {
-						Text("应用规则")
-							.font(.headline.weight(.semibold))
-						Text("按应用设置输入法，标点作为辅助选项。")
-							.font(.caption2)
-							.foregroundStyle(.secondary)
-					}
-					.padding(.leading, DesignTokens.Spacing.xs)
+			VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+				VStack(alignment: .leading, spacing: 1) {
+					Text("应用规则")
+						.font(.headline.weight(.semibold))
+					Text("按应用设置输入法，标点作为辅助选项。")
+						.font(.caption2)
+						.foregroundStyle(.secondary)
+				}
+				.padding(.leading, DesignTokens.Spacing.xs)
 
-					InspectorTable(
-						summary: "\(filteredApps.count) 个应用",
-						actions: {
-							EmptyView()
-						},
-						columns: {
-							HStack(spacing: DesignTokens.Spacing.sm) {
-								HStack(spacing: DesignTokens.Spacing.sm) {
-									Color.clear
-										.frame(width: DesignTokens.Sizes.iconLarge, height: 1)
-									Text("应用")
-										.frame(maxWidth: .infinity, alignment: .leading)
-								}
-								.frame(maxWidth: .infinity, alignment: .leading)
-								Text("输入法")
-									.frame(width: DesignTokens.Sizes.inspectorPickerWidth, alignment: .center)
-								Text("英文标点")
-									.frame(width: DesignTokens.Sizes.inspectorToggleWidth, alignment: .leading)
-							}
-						},
-						rows: {
+				VStack(spacing: 0) {
+					AppRulesTableColumns()
+						.font(.caption)
+						.foregroundStyle(.secondary)
+						.padding(.horizontal, DesignTokens.Spacing.md)
+						.padding(.vertical, 5)
+
+					Divider()
+
+					ScrollView {
+						LazyVStack(spacing: 0) {
 							ForEach(Array(filteredApps.enumerated()), id: \.element.bundleId) { index, app in
 								AppRuleCardView(
 									app: app,
@@ -71,12 +60,13 @@ struct AppSettingsTab: View {
 								)
 							}
 						}
-					)
+					}
 				}
-				.frame(maxWidth: DesignTokens.Sizes.contentWidth, alignment: .leading)
-				.padding(.horizontal, DesignTokens.Spacing.xl)
-				.padding(.vertical, DesignTokens.Spacing.lg)
+				.inspectorTableChrome()
 			}
+			.frame(maxWidth: DesignTokens.Sizes.contentWidth, maxHeight: .infinity, alignment: .topLeading)
+			.padding(.horizontal, DesignTokens.Spacing.xl)
+			.padding(.vertical, DesignTokens.Spacing.lg)
 
 			AppRulesBottomBar(
 				appCount: filteredApps.count,
@@ -161,6 +151,24 @@ struct AppSettingsTab: View {
 	}
 }
 
+private struct AppRulesTableColumns: View {
+	var body: some View {
+		HStack(spacing: DesignTokens.Spacing.sm) {
+			HStack(spacing: DesignTokens.Spacing.sm) {
+				Color.clear
+					.frame(width: DesignTokens.Sizes.iconLarge, height: 1)
+				Text("应用")
+					.frame(maxWidth: .infinity, alignment: .leading)
+			}
+			.frame(maxWidth: .infinity, alignment: .leading)
+			Text("输入法")
+				.frame(width: DesignTokens.Sizes.inspectorPickerWidth, alignment: .center)
+			Text("英文标点")
+				.frame(width: DesignTokens.Sizes.inspectorToggleWidth, alignment: .leading)
+		}
+	}
+}
+
 private struct AppRulesBottomBar: View {
 	@EnvironmentObject private var viewModel: InputMethodManager
 
@@ -171,33 +179,28 @@ private struct AppRulesBottomBar: View {
 	let onDelete: () -> Void
 
 	private var selectionSummary: String {
-		if selectedCount > 0 {
-			return "\(appCount) 个应用  已选 \(selectedCount) 个"
-		}
 		return "\(appCount) 个应用"
+	}
+
+	private var selectedSummary: String {
+		"已选 \(selectedCount) 个"
 	}
 
 	var body: some View {
 		HStack(spacing: DesignTokens.Spacing.lg) {
-			Text(selectionSummary)
-				.font(.caption)
-				.foregroundStyle(.secondary)
-				.lineLimit(1)
-
-			Spacer(minLength: DesignTokens.Spacing.lg)
-
-			HStack(spacing: 10) {
-				Text("默认输入法")
+			HStack(spacing: DesignTokens.Spacing.md) {
+				Text(selectionSummary)
 					.font(.caption)
 					.foregroundStyle(.secondary)
+					.lineLimit(1)
 
-				CompactGlobalDefaultPicker()
-					.environmentObject(viewModel)
-			}
+				Text(selectedSummary)
+					.font(.caption)
+					.foregroundStyle(.secondary)
+					.lineLimit(1)
+					.frame(width: 64, alignment: .leading)
+					.opacity(selectedCount > 0 ? 1 : 0)
 
-			Spacer(minLength: DesignTokens.Spacing.lg)
-
-			HStack(spacing: DesignTokens.Spacing.md) {
 				Button {
 					onAdd()
 				} label: {
@@ -222,6 +225,17 @@ private struct AppRulesBottomBar: View {
 				.focusable(false)
 				.help(isDeleteDisabled ? "删除应用规则" : "删除选中的应用规则")
 				.accessibilityLabel("删除选中的应用规则")
+			}
+
+			Spacer(minLength: DesignTokens.Spacing.lg)
+
+			HStack(spacing: 10) {
+				Text("默认输入法")
+					.font(.caption)
+					.foregroundStyle(.secondary)
+
+				CompactGlobalDefaultPicker()
+					.environmentObject(viewModel)
 			}
 		}
 		.frame(maxWidth: .infinity, alignment: .center)

@@ -14,29 +14,22 @@ struct MainView: View {
 
 			detailContent
 				.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-				.background(DesignTokens.Colors.windowBackground)
+				.background {
+					DesignTokens.Colors.contentBackground
+						.ignoresSafeArea(.container, edges: .top)
+				}
 		}
 		.frame(minWidth: 860, minHeight: 560)
 		.environmentObject(navigationVM)
-		.toolbar {
-			ToolbarItemGroup(placement: .primaryAction) {
-				HStack(spacing: 10) {
-					Image(systemName: "magnifyingglass")
-						.foregroundStyle(.secondary)
-						.font(.system(size: 18, weight: .regular))
-					TextField(navigationVM.selection.searchPrompt, text: activeSearchBinding)
-						.textFieldStyle(.plain)
-						.frame(width: toolbarSearchWidth)
-				}
-				.padding(.horizontal, 18)
-				.padding(.vertical, 10)
-				.background(Color.white.opacity(0.72), in: Capsule())
-				.overlay {
-					Capsule()
-						.strokeBorder(Color.secondary.opacity(0.10), lineWidth: 1)
-				}
-				.shadow(color: .black.opacity(0.035), radius: 12, x: 0, y: 3)
-			}
+		.overlay(alignment: .topTrailing) {
+			ToolbarSearchField(
+				prompt: navigationVM.selection.searchPrompt,
+				text: activeSearchBinding,
+				width: toolbarSearchWidth
+			)
+			.padding(.top, 14)
+			.padding(.trailing, 44)
+			.ignoresSafeArea(.container, edges: .top)
 		}
 	}
 
@@ -66,14 +59,57 @@ struct MainView: View {
 	private var toolbarSearchWidth: CGFloat {
 		switch navigationVM.selection {
 		case .appRules:
-			return 420
+			return 240
 		case .memory:
-			return 360
+			return 220
 		case .preferences:
-			return 300
+			return 200
 		}
 	}
+}
 
+private struct ToolbarSearchField: View {
+	let prompt: String
+	@Binding var text: String
+	let width: CGFloat
+
+	var body: some View {
+		HStack(spacing: 7) {
+			Image(systemName: "magnifyingglass")
+				.font(.system(size: 12, weight: .medium))
+				.foregroundStyle(.secondary)
+
+			TextField(prompt, text: $text)
+				.textFieldStyle(.plain)
+				.font(.system(size: 13))
+				.lineLimit(1)
+
+			if !text.isEmpty {
+				Button {
+					text = ""
+				} label: {
+					Image(systemName: "xmark.circle.fill")
+						.font(.system(size: 12, weight: .medium))
+						.symbolRenderingMode(.hierarchical)
+						.foregroundStyle(.secondary)
+				}
+				.buttonStyle(.plain)
+				.focusable(false)
+				.help("清除搜索")
+				.accessibilityLabel("清除搜索")
+			}
+		}
+		.frame(width: width, height: 26)
+		.padding(.horizontal, 10)
+		.background(
+			DesignTokens.Colors.contentBackground.opacity(0.74),
+			in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+		)
+		.overlay {
+			RoundedRectangle(cornerRadius: 7, style: .continuous)
+				.strokeBorder(DesignTokens.Colors.divider.opacity(0.20), lineWidth: 1)
+		}
+	}
 }
 
 #Preview {

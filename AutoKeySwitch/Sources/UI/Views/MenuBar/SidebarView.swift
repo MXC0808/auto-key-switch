@@ -12,20 +12,11 @@ struct SidebarView: View {
 				blendingMode: .behindWindow,
 				state: .followsWindowActiveState
 			)
+			.ignoresSafeArea(.container, edges: .top)
 
 			VStack(alignment: .leading, spacing: 18) {
-				VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {
-					Text("AutoKeySwitch")
-						.font(.system(size: 20, weight: .semibold))
-					Text("输入法自动切换与状态记忆")
-						.font(.system(size: 11))
-						.foregroundStyle(.secondary)
-				}
-				.padding(.horizontal, DesignTokens.Spacing.xl)
-				.padding(.top, 14)
-
-				Divider()
-					.padding(.horizontal, DesignTokens.Spacing.lg)
+				Spacer()
+					.frame(height: 6)
 
 				ForEach(NavigationVM.grouped, id: \.id) { group in
 					VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxs) {

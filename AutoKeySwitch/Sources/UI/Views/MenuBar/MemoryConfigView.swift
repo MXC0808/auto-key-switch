@@ -38,41 +38,30 @@ struct MemoryConfigView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("应用记忆")
-                            .font(.headline.weight(.semibold))
-                        Text("让应用在切回前台时恢复上次输入法。")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.leading, DesignTokens.Spacing.xs)
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("应用记忆")
+                        .font(.headline.weight(.semibold))
+                    Text("让应用在切回前台时恢复上次输入法。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.leading, DesignTokens.Spacing.xs)
 
-                    InspectorTable(
-                        summary: "运行中应用",
-                        actions: {
-                            EmptyView()
-                        },
-                        columns: {
-                            HStack(spacing: DesignTokens.Spacing.sm) {
-                                HStack(spacing: DesignTokens.Spacing.sm) {
-                                    Color.clear
-                                        .frame(width: DesignTokens.Sizes.iconLarge, height: 1)
-                                    Text("应用")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                Text("记忆状态")
-                                    .frame(width: DesignTokens.Sizes.inspectorStatusWidth, alignment: .leading)
-                                Text("启用")
-                                    .frame(width: DesignTokens.Sizes.inspectorActionWidth, alignment: .center)
-                            }
-                        },
-                        rows: {
-                            if unifiedApps.isEmpty {
-                                MemoryEmptyStateView(isSearching: !searchText.isEmpty)
-                            } else {
+                VStack(spacing: 0) {
+                    MemoryTableColumns()
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, DesignTokens.Spacing.md)
+                        .padding(.vertical, 5)
+
+                    Divider()
+
+                    ScrollView {
+                        if unifiedApps.isEmpty {
+                            MemoryEmptyStateView(isSearching: !searchText.isEmpty)
+                        } else {
+                            LazyVStack(spacing: 0) {
                                 ForEach(unifiedApps) { displayApp in
                                     VStack(spacing: 0) {
                                         MemoryAppRowView(
@@ -99,13 +88,14 @@ struct MemoryConfigView: View {
                                 }
                             }
                         }
-                    )
+                    }
                 }
-                .frame(maxWidth: DesignTokens.Sizes.contentWidth, alignment: .leading)
-                .padding(.horizontal, DesignTokens.Spacing.xl)
-                .padding(.top, 14)
-                .padding(.bottom, 14)
+                .inspectorTableChrome()
             }
+            .frame(maxWidth: DesignTokens.Sizes.contentWidth, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.horizontal, DesignTokens.Spacing.xl)
+            .padding(.top, 14)
+            .padding(.bottom, 14)
 
             MemoryBottomBar(
                 appCount: unifiedApps.count,
@@ -159,6 +149,24 @@ struct MemoryConfigView: View {
             .filter { bundleIDsToRemove.contains($0.bundleId) }
         viewModel.removeAppsFromMemory(toRemove)
         selectedApps.subtract(bundleIDsToRemove)
+    }
+}
+
+private struct MemoryTableColumns: View {
+    var body: some View {
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Color.clear
+                    .frame(width: DesignTokens.Sizes.iconLarge, height: 1)
+                Text("应用")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text("记忆状态")
+                .frame(width: DesignTokens.Sizes.inspectorStatusWidth, alignment: .leading)
+            Text("启用")
+                .frame(width: DesignTokens.Sizes.inspectorActionWidth, alignment: .center)
+        }
     }
 }
 

@@ -47,6 +47,7 @@ enum DesignTokens {
 		static let divider = Color(NSColor.separatorColor)
 		static let background = Color(NSColor.controlBackgroundColor)
 		static let windowBackground = Color(NSColor.windowBackgroundColor)
+		static let contentBackground = Color(NSColor.controlBackgroundColor).opacity(0.42)
 		static let secondaryBackground = Color(NSColor.underPageBackgroundColor)
 		static let sidebarActiveBackground = Color.gray.opacity(0.2)
 		static let sidebarPressedBackground = Color.gray.opacity(0.1)

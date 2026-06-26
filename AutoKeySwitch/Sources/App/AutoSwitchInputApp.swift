@@ -106,10 +106,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 				defer: false
 			)
 
-			window.title = "AutoKeySwitch"
-			window.titleVisibility = .visible
+			window.title = ""
+			window.titleVisibility = .hidden
 			window.titlebarAppearsTransparent = true
+			window.backgroundColor = .controlBackgroundColor
 			window.toolbarStyle = .unified
+			window.titlebarSeparatorStyle = .none
 			window.collectionBehavior.insert(.fullScreenPrimary)
 			window.contentView = NSHostingView(rootView: contentView)
 			window.minSize = NSSize(width: 860, height: 560)
