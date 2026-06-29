@@ -66,4 +66,19 @@ struct InputMethodHUDPanelTests {
         #expect(frame.origin.y.rounded() == frame.origin.y)
         #expect(abs(frame.midX - visibleFrame.midX) <= 0.5)
     }
+
+    @MainActor
+    @Test("show reuses the HUD content view across updates")
+    func testShowReusesContentViewAcrossUpdates() {
+        let panel = InputMethodHUDPanel()
+
+        panel.show(inputMethodName: "ABC")
+        let firstContentView = panel.contentView
+
+        panel.show(inputMethodName: "拼音")
+        let secondContentView = panel.contentView
+
+        #expect(firstContentView === secondContentView)
+        panel.orderOut(nil)
+    }
 }

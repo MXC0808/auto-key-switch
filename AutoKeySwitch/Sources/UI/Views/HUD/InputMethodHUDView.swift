@@ -43,6 +43,8 @@ struct InputMethodHUDView: View {
 
 final class InputMethodHUDPanel: NSPanel {
     private var hideWorkItem: DispatchWorkItem?
+    private let visualEffectView: NSVisualEffectView
+    private let hostingView: NSHostingView<InputMethodHUDView>
 
     static func hudFrame(in visibleFrame: NSRect, contentSize: NSSize) -> NSRect {
         let width = max(116, min(ceil(contentSize.width), 220))
@@ -56,6 +58,23 @@ final class InputMethodHUDPanel: NSPanel {
     }
 
     init() {
+        let visualEffectView = NSVisualEffectView()
+        visualEffectView.state = .active
+        visualEffectView.material = .hudWindow
+        visualEffectView.blendingMode = .behindWindow
+        visualEffectView.wantsLayer = true
+        visualEffectView.layer?.cornerRadius = 12
+        visualEffectView.layer?.masksToBounds = true
+        visualEffectView.layer?.borderWidth = 1
+        visualEffectView.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.07).cgColor
+
+        let hostingView = NSHostingView(rootView: InputMethodHUDView(inputMethodName: ""))
+        hostingView.autoresizingMask = [.width, .height]
+        visualEffectView.addSubview(hostingView)
+
+        self.visualEffectView = visualEffectView
+        self.hostingView = hostingView
+
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 300, height: 78),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -67,6 +86,7 @@ final class InputMethodHUDPanel: NSPanel {
         backgroundColor = .clear
         hasShadow = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        contentView = visualEffectView
     }
 
     private func targetScreen() -> NSScreen? {
@@ -76,17 +96,7 @@ final class InputMethodHUDPanel: NSPanel {
     func show(inputMethodName: String) {
         hideWorkItem?.cancel()
 
-        let visualEffectView = NSVisualEffectView()
-        visualEffectView.state = .active
-        visualEffectView.material = .hudWindow
-        visualEffectView.blendingMode = .behindWindow
-        visualEffectView.wantsLayer = true
-        visualEffectView.layer?.cornerRadius = 12
-        visualEffectView.layer?.masksToBounds = true
-        visualEffectView.layer?.borderWidth = 1
-        visualEffectView.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.07).cgColor
-
-        let hostingView = NSHostingView(rootView: InputMethodHUDView(inputMethodName: inputMethodName))
+        hostingView.rootView = InputMethodHUDView(inputMethodName: inputMethodName)
         hostingView.layout()
         let fittingSize = hostingView.fittingSize
         let screenFrame = targetScreen()?.visibleFrame ?? NSScreen.screens.first?.visibleFrame ?? NSRect.zero
@@ -94,10 +104,6 @@ final class InputMethodHUDPanel: NSPanel {
 
         visualEffectView.frame = NSRect(origin: .zero, size: frame.size)
         hostingView.frame = visualEffectView.bounds
-        hostingView.autoresizingMask = [.width, .height]
-        visualEffectView.addSubview(hostingView)
-
-        contentView = visualEffectView
 
         setFrame(frame, display: true)
         #if DEBUG
